@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Button } from "react-bootstrap";
 import DataTable from "react-data-table-component";
-import { FaPencilAlt, FaRegTrashAlt } from "react-icons/fa";
+import { FaPencilAlt } from "react-icons/fa";
 import Alert from "../../component/Alert";
-import MsgYesNoDialog from "../../component/MsgYesNoDialog";
 import ApiErrorMessage from "../PosInventarioProductos/Dto/ApiErrorMessage";
 import FormData from "../PosInventarioProductos/Dto/FormData";
 import MsgDialog from "../../component/MsgDialog";
 import { formatDate, httpApiGet, httpApiPPPD } from "../../lib";
 import BarraMenu from "../../component/BarraMenu";
+import GenericSelect from "../../component/GenericSelect";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -99,7 +99,6 @@ const PosInventarioProductos = () => {
     let [apiError, setApiError] = useState(ApiErrMsg); 
     let [data, setData] = useState([]);   
     let [cpRecords, setCpRecords] = useState([]);       
-    const [showYesNo, setShowYesNo] = useState(false); 
     const [showInfo, setShowInfo] = useState(false);    
     const [operacion, setOperacion] = useState(false); 
     let [mensajeModal, setMensajeModal] = useState([]);       
@@ -108,8 +107,7 @@ const PosInventarioProductos = () => {
     let [sltPrd, setSltPrd] = useState([]);      
     let [sltPrdCmp, setSltPrdCmp] = useState([]);    
     let [sltUM, setSltUM] = useState([]); 
-    let [sltEmbalaje, setSltEmbalaje] = useState([]); 
-    let [filtro, setFiltro] = useState("");                      
+    let [sltEmbalaje, setSltEmbalaje] = useState([]);                  
     
     // Obtiene la fecha y hora actual en formato YYYY-MM-DDTHH:MM:SS
     const hh = (new Date().getHours()) < 10 ? `0${new Date().getHours()}`:`${new Date().getHours()}`;
@@ -202,7 +200,6 @@ const PosInventarioProductos = () => {
     ];
 
     const handler = (e: any) => {
-
         const id: string = e.target.id;
         const value = e.target.value;
         setFormData({ ...frmData, [id]: value });
@@ -212,6 +209,19 @@ const PosInventarioProductos = () => {
         }
         setApiError({...apiError});
     }
+
+    const handlerGenSelect = (opt: {id: string, value: string, text: string}) => {
+
+        console.log(opt);
+        frmData[opt.id] = parseInt(opt.value);
+        setFormData({ ...frmData});
+        apiError = {
+            ...apiError,
+            [opt.id]: [],
+        }
+        setApiError({...apiError});
+        console.log(frmData);
+    }    
 
     const listar = async () =>{
         const response = await httpApiGet("Posinventarioproducto");
@@ -384,7 +394,8 @@ const PosInventarioProductos = () => {
     const edita = (row: FormData) =>{
         frmData = {...row, fechaCreacion: row.fechaCreacion.substring(0, 10), fechaVencimiento: row.fechaVencimiento.substring(0, 10)}
         setFormData({...frmData});
-        setBtnRef("Actualizar");        
+        setBtnRef("Actualizar");  
+        console.log(frmData);      
     };
 
 /*     const borra = (idx: number) => {
@@ -512,12 +523,15 @@ const PosInventarioProductos = () => {
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="idPos" className="form-label">* Pos</label>                
-                                <select className="form-select" aria-label="Default select example" id="idPos" value={frmData.idPos} onChange={handler}  disabled={(btnRef == "Actualizar")}>
-                                    <option value="0" >Seleccione pos</option>
-                                    {
-                                        sltPos.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.nombre}`}</option>)
-                                    }                          
-                                </select>
+                                <GenericSelect 
+                                    Url="SedePos" 
+                                    ValueField="id"
+                                    ValueText="nombre"
+                                    Value={`${frmData.idPos}`} 
+                                    onSelect={handlerGenSelect} 
+                                    ClassName="form-select" 
+                                    id={`idPos`}
+                                />
                                 <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
                             </div>
 
@@ -732,6 +746,7 @@ const PosInventarioProductos = () => {
                             Show={showInfo}
                             HandlerdClickOk={()=> setShowInfo(false)}
                             HandlerdClickNok={null}
+                            size="md"
                         />}
                     </div>            
                 </div>
