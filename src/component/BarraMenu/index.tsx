@@ -23,21 +23,22 @@ const BarraMenu = () => {
 
     return (
         <nav className="navbar navbar-expand-lg d-flex flex-column text-center fw-bold"  style={{color: "#2A3482", backgroundColor: "#F4F4F4"}} >
-            <div className="h3 m-2 p-4 border w-100 fw-bold"  style={{color: "#2A3482", backgroundColor: "#E3E2E4"}} >
+            <div className="h3 m-2 p-4 border w-100 fw-bold "  style={{color: "#2A3482", backgroundColor: "#E3E2E4"}} >
                 Sistema de Información y Gestión de Inventarios y Puntos de Ventas
             </div>
-            <div className="container " >
+            <div className="d-flex flex-wrap w-100 " >
 
                 {/* Imagén marca fluida */}
-                <div className=" m-2" style={{width: "5%"}} >
+                <div className=" m-2 " style={{width: "5%"}} >
                     <img src={logoEmp} alt="" className="img-fluid" />
                 </div>
 
                 {/* Ícono de hamburguesa en modo responsive*/}
-                <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span className="navbar-toggler-icon"></span>
-                </button>
-
+                <div>
+                    <button className="navbar-toggler " type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                        <span className="navbar-toggler-icon"></span>
+                    </button>                    
+                </div>
                 <div className="collapse navbar-collapse "   style={{"color": "#2A3482"}} id="navbarSupportedContent">
                     <ul className="navbar-nav me-auto mb-2 mb-lg-0"  >
                         {/* Home*/} 
@@ -46,7 +47,8 @@ const BarraMenu = () => {
                                 <FaClipboardCheck /> Inventario
                             </Link>  
                             <ul className="dropdown-menu" aria-labelledby="navbarDropdownReferencia">                               
-                                <li><Link className={`dropdown-item `} to="/posinventario"   style={{"color": "#2A3482"}}   > <FaBarcode /> De productos</Link></li>   
+                                <li><Link className={`dropdown-item `} to="/inventario"   style={{"color": "#2A3482"}}   > <FaBarcode /> De productos</Link></li>   
+                                {/* <li><Link className={`dropdown-item `} to="/posinventario"   style={{"color": "#2A3482"}}   > <FaBarcode /> De productos</Link></li>  */} 
                                 <li><Link className={`dropdown-item `}   style={{"color": "#2A3482"}}   to="/tipoproductopage" ><FaBity /> De tipo producto</Link></li>  
                                 <li><Link className={`dropdown-item `}   style={{"color": "#2A3482"}}   to="/tipoembalajepage" ><FaCodiepie /> De embalajes</Link></li>     
                                 <li><Link className={`dropdown-item `}   style={{"color": "#2A3482"}}   to="/unidadespage" ><FaBuffer /> De unidades</Link></li> 

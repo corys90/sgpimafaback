@@ -6,7 +6,7 @@ import Alert from "../../component/Alert";
 import ApiErrorMessage from "../PosInventarioProductos/Dto/ApiErrorMessage";
 import FormData from "../PosInventarioProductos/Dto/FormData";
 import MsgDialog from "../../component/MsgDialog";
-import { formatDate, httpApiGet, httpApiPPPD } from "../../lib";
+import { formatDate, httpApiGet} from "../../lib";
 import BarraMenu from "../../component/BarraMenu";
 import GenericSelect from "../../component/GenericSelect";
 
@@ -278,7 +278,8 @@ const PosInventarioProductos = () => {
     
     const OnbtnGuardar = async () => {
         
-        let msg = ""; 
+        console.log(frmData);
+/*         let msg = ""; 
         mensajeModal =  [];
 
         if ((frmData.idPos && frmData.idPos <= 0)){
@@ -388,7 +389,7 @@ const PosInventarioProductos = () => {
             }
             setMensajeModal(mensajeModal);            
             setShowInfo(true);
-        }
+        } */
     }  
 
     const edita = (row: FormData) =>{
@@ -397,15 +398,6 @@ const PosInventarioProductos = () => {
         setBtnRef("Actualizar");  
         console.log(frmData);      
     };
-
-/*     const borra = (idx: number) => {
-
-        data[idx].estado = (data[idx].estado === 1) ? 2 : 1;
-        data[idx].estadoName = (data[idx].estado === 1) ? "Inactivo" : "Activo";
-        setData([...data]);
-
-        setShowYesNo(false);
-    } */
 
     const changeTextFiltro = (evnt: any) => {
         if (evnt.target.value.trim() === ""){
@@ -754,7 +746,6 @@ const PosInventarioProductos = () => {
                     <span className=' h3 text-white'>@Corys90</span>
                 </div>                        
             </div>
-
         </>
     )
 };

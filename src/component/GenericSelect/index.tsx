@@ -8,13 +8,13 @@ const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onS
     const [placeholder, setPlaceHolder] = useState("Cargando...");
     const [value, setValue] = useState({id: "", value: props.Value, text: ""});
 
-    const getPos = async ()=>{
+    const getApi = async ()=>{
         const response = await httpApiGet(props.Url);
         if (response.statusCode >= 400){
             setPlaceHolder("Error: sin datos que mostrar");
         }else{
             if (response.data.length > 0){
-                setPlaceHolder("Seleccione P.O.S.");
+                setPlaceHolder("Seleccione opción");
                 setSltPos(response.data);                
             }else{
                 setPlaceHolder("No hay datos...");             
@@ -33,8 +33,7 @@ const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onS
     }
 
     useEffect(()=>{
-        console.log(props.Value);
-        getPos();
+        getApi();
     }, [props.Value]);
 
     return(

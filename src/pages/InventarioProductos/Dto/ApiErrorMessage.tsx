@@ -4,6 +4,7 @@
 
 interface ApiErrorMessage {
     id                  : string[],
+    idPos               : string[],
     idCodigo            : string[],
     tipoProducto        : string[],
     idProductoCompuesto : string[],
