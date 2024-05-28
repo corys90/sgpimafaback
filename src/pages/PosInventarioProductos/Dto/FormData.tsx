@@ -3,6 +3,7 @@
 
 interface FormData {
     id?                 : number;   
+    idPos               : number;
     idCodigo?           : number;
     tipoProducto?       : number;
     idProductoCompuesto : number;

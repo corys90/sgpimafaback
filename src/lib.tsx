@@ -86,3 +86,16 @@ export const getFechaYhora = () =>{
 
     return (fechaYhora);
 }
+
+export const getTipoNameByid = (id: number, lista: []) =>{
+    
+    let nm = "";    
+    lista.map((element: any) => {
+        if (id === element.id){
+            nm = element.nombre;
+            return;
+        }
+    });
+
+    return (nm);
+}
