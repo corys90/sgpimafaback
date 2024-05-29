@@ -239,10 +239,10 @@ const PosInventarioProductos = () => {
                                 <label htmlFor="pos" className="">Mostrar</label> 
                                 <select className="form-select" aria-label="Default select example" id="idPos" value={idPos} onChange={handler}>
                                     <option value="0" >Seleccione opción</option>
+                                    <option value="-1" >Todos los productos de todos los P.O.S.</option>                                          
                                     {
                                         tipos.sedes && tipos.sedes.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.nombre}`}</option>)
-                                    }    
-                                    <option value="-1" >Todos los productos de todos los P.O.S.</option>                                    
+                                    }                                  
                                 </select>          
                             </div>
                             <div className="col-lg-6 col-md-12 col-sm-12 mb-3">

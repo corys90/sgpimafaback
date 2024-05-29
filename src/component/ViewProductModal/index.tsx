@@ -1,8 +1,6 @@
 import Modal from 'react-bootstrap/Modal';
-import FormData from "../../pages/PosInventarioProductos/Dto/FormData";
 
 const ViewProductModal = (props: {Data: any, Show: boolean, onClose: any}) => {
-    console.log("view: ", props.Data);
  return (
       <div>
         <Modal show={props.Show} centered={true} animation={true} size='xl' onHide={props.onClose}>
@@ -86,12 +84,12 @@ const ViewProductModal = (props: {Data: any, Show: boolean, onClose: any}) => {
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="nombre" className="form-label">Tamaño (cms)</label>                  
-                        <input  className="form-control text-end" id="tamano"  placeholder="" value={props.Data.tamano.toLocaleString()} />
+                        <input  className="form-control text-end" id="tamano"  placeholder="" value={props.Data.tamano?.toLocaleString()} />
                     </div>   
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="nombre" className="form-label">Peso (Grms)</label>                  
-                        <input  className="form-control text-end" id="peso"  placeholder="" value={props.Data.peso.toLocaleString()} />
+                        <input  className="form-control text-end" id="peso"  placeholder="" value={props.Data.peso?.toLocaleString()} />
                     </div> 
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
@@ -101,28 +99,28 @@ const ViewProductModal = (props: {Data: any, Show: boolean, onClose: any}) => {
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="nombre" className="form-label">Temperatura (°C)</label>                  
-                        <input className="form-control text-end" id="temperatura"  placeholder="" value={props.Data.temperatura.toLocaleString()}/>
+                        <input className="form-control text-end" id="temperatura"  placeholder="" value={props.Data.temperatura?.toLocaleString()}/>
                     </div>
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="nombre" className="form-label">Stock Mínimo</label>                  
-                        <input className="form-control text-end" id="stockMinimo"  placeholder="" value={props.Data.stockMinimo}/>
+                        <input className="form-control text-end" id="stockMinimo"  placeholder="" value={props.Data.stockMinimo?.toLocaleString()}/>
                     </div> 
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="nombre" className="form-label">Descuento (%)</label>                  
-                        <input className="form-control text-end" id="descuento"  placeholder="" value={props.Data.descuento.toLocaleString()}/>
+                        <input className="form-control text-end" id="descuento"  placeholder="" value={props.Data.descuento?.toLocaleString()}/>
                     </div>  
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="nombre" className="form-label">Impuestos (%)</label>                  
-                        <input className="form-control text-end" id="impuesto"  placeholder="" value={props.Data.impuesto.toLocaleString()} />
+                        <input className="form-control text-end" id="impuesto"  placeholder="" value={props.Data.impuesto?.toLocaleString()} />
 
                     </div> 
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="nombre" className="form-label">Valor Impuesto ($)</label>                  
-                        <input className="form-control text-end" id="valorImp"  placeholder="" value={props.Data.valorImp.toLocaleString()} />
+                        <input className="form-control text-end" id="valorImp"  placeholder="" value={props.Data.valorImp?.toLocaleString()} />
                     </div> 
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
@@ -132,7 +130,7 @@ const ViewProductModal = (props: {Data: any, Show: boolean, onClose: any}) => {
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="nombre" className="form-label">Días de vencimiento</label>                                                                                                                                                                    
-                        <input  className="form-control text-end" id="diasVencimiento"  placeholder="" value={props.Data.diasVencimiento.toLocaleString()} />
+                        <input  className="form-control text-end" id="diasVencimiento"  placeholder="" value={props.Data.diasVencimiento?.toLocaleString()} />
                     </div> 
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
