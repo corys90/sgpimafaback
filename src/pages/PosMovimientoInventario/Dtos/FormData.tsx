@@ -3,18 +3,13 @@
 
 interface FormData {
     id?             : number;
-    idCaja?         : number;    
+    idCodigo?       : number;    
     idPos?          : number;
-    valor?          : number;
-    fechaArqueo?    : string;
-    estadoArqueo?   : number;
-    revisorId?      : number; 
+    cantidad?       : number;
+    fechaMovimiento?: string;
     user?           : string;    
     createdAt?      : string;    
-    updateAt?       : string; 
-    nmPos           : string;       
-    nmCja           : string;  
-    nmRev           : string;     
+    updatedAt?      : string;     
 }
 
 export default FormData;

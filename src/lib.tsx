@@ -52,7 +52,7 @@ export async function httpApiGet(endp: string) {
                     "content-type": "application/json; charset=utf-8"
                 }
 
-        });     
+        });  
         const data = await response.json();
         return (data);
     }

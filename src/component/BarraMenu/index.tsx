@@ -49,7 +49,7 @@ const BarraMenu = () => {
                             <ul className="dropdown-menu" aria-labelledby="navbarDropdownReferencia">                               
                                 <li><Link className={`dropdown-item `} to="/inventario"   style={{"color": "#2A3482"}}   > <FaBarcode /> De productos</Link></li>   
                                 <li><Link className={`dropdown-item `} to="/posinventario"   style={{"color": "#2A3482"}}   > <FaBox /> De productos x POS</Link></li>  
-                                <li><Link className={`dropdown-item `} to="/posmovimientoinventario"   style={{"color": "#2A3482"}}   > <FaBoxOpen /> Movimiento Inventario</Link></li>                                  
+                                <li><Link className={`dropdown-item `} to="/posmovimientoinventario"   style={{"color": "#2A3482"}}   > <FaBoxOpen /> Ingreso inventario</Link></li>                                  
                                 <li><Link className={`dropdown-item `}   style={{"color": "#2A3482"}}   to="/tipoproductopage" ><FaBity /> De tipo producto</Link></li>  
                                 <li><Link className={`dropdown-item `}   style={{"color": "#2A3482"}}   to="/tipoembalajepage" ><FaCodiepie /> De embalajes</Link></li>     
                                 <li><Link className={`dropdown-item `}   style={{"color": "#2A3482"}}   to="/unidadespage" ><FaBuffer /> De unidades</Link></li> 
