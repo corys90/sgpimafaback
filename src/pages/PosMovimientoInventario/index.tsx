@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Button } from "react-bootstrap";
 import DataTable from "react-data-table-component";
-import { FaPencilAlt, FaRegTrashAlt, FaSearch } from "react-icons/fa";
+import { FaPencilAlt, FaSearch } from "react-icons/fa";
 import Alert from "../../component/Alert";
-import MsgYesNoDialog from "../../component/MsgYesNoDialog";
 import ApiErrorMessage from "./Dtos/ApiErrorMessage";
 import FormData from "./Dtos/FormData";
 import MsgDialog from "../../component/MsgDialog";
-import { formatDate, httpApiGet, httpApiPPPD } from "../../lib";
+import { getFechaYhora, httpApiGet, httpApiPPPD } from "../../lib";
 import BarraMenu from "../../component/BarraMenu";
+import GenericSelect from "../../component/GenericSelect";
 
 
 const pagOptions = {
@@ -49,45 +49,32 @@ const loader = ()=> {
 }
 
 const form: FormData = {
-    id          : 0,
-    idPos       : 0,
-    idCaja      : 0, 
-    valor       : 0,
-    fechaArqueo :"",
-    user        :"",
-    revisorId   : 0,    
-    estadoArqueo: 0, 
-    createdAt   :"",
-    updateAt    :"" ,
-    nmPos       : "",       
-    nmCja       : "",
-    nmRev       : ""
+    id              : 0,
+    idPos           : 0,
+    idCodigo        : 0, 
+    cantidad        : 0,
+    updatedAt       : "",
+    createdAt       : "",
+    fechaMovimiento : "",
+    user            : ""
 };
 
 const ApiErrMsg: ApiErrorMessage = {
     idPos       : [],
-    idCaja      : [],
-    fechaArqueo : [],
-    valor       : [],
-    revisorId   : [],
-    estadoArqueo: [],    
+    idCodigo    : []    
 };
-
-const revisores = [{id: 1, nombre: "Administrador(a)"}, {id: 2, nombre: "Supervisor(a)"}, {id: 3, nombre: "Coordinador(a)"}];
-const estadosArqueo = [{id: 1, nombre: "Cuadrada"}, {id: 2, nombre: "Faltante"}, {id: 3, nombre: "Sobrante"}];
 
 const PosMovimientoInventario= () => {
     
     const [estadosVisibles, setEstadosVisibles] = useState(false);
-    const [tituloBoton, setTituloBoton] = useState("Mostrar movimientos");
+    const [tituloBoton, setTituloBoton] = useState("Historial ingreso");
     let [frmData, setFormData] = useState(form);    
     const [pending, setPending] = useState(false); 
-    // eslint-disable-next-line prefer-const
     let [apiError, setApiError] = useState(ApiErrMsg); 
     let [data, setData] = useState([]);   
-    const [showYesNo, setShowYesNo] = useState(false); 
+    let [prd, setPrd] = useState({nombre: "", descripcion:"", stock: 0});   
     const [showInfo, setShowInfo] = useState(false);    
-    const [operacion, setOperacion] = useState(false); 
+    const [operacion, setOperacion] = useState(true); 
     let [mensajeModal, setMensajeModal] = useState([]);       
     const [btnRef, setBtnRef] = useState("Guardar");      
     let [sltPos, setSltPos] = useState([]);     
@@ -95,77 +82,58 @@ const PosMovimientoInventario= () => {
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
         {
-            name: 'Id.',
+            name: 'Nro.',
             selector: (row: FormData) => row.id,
-            width: "100px",
+            grow: 1,
             sortable: true,
             right: "true",
         },  
         {
+            name: 'Código',
+            selector: (row: FormData) => row.idCodigo,
+            grow: 2,
+            wrap: true,
+            sortable: true,
+            right: "true",
+        }, 
+        {
+            name: 'POS',
+            selector: (row: FormData) => row.idPos,
+            grow: 2,
+            wrap: true,
+            sortable: true,
+            right: "true", 
+            omit: true           
+        }, 
+        {
             name: 'POS',
             selector: (row: FormData) => row.nmPos,
-            width: "170px",
+            grow: 2,
             wrap: true,
-            sortable: true,
-        }, 
-        {
-            name: 'Caja',
-            selector: (row: FormData) => row.nmCja,
-            width: "100px",
-            wrap: true,
-            sortable: true,
-        },        
-        {
-            name: 'Arqueo',
-            selector: (row: FormData) => row.fechaArqueo,
-            width: "200px",
-            wrap: true,
-            sortable: true,            
+            sortable: true      
         },         
         {
-            name: 'Valor',
-            selector: (row: FormData) => row.valor,
-            width: "150px",
-            right: "true",
+            name: 'Cantidad',
+            selector: (row: FormData) => row.cantidad,
+            grow: 3,
+            wrap: true,
             sortable: true,
-            format: (row: FormData)=> row.valor?.toLocaleString(),                       
-        }, 
-        {
-            name: 'Estado',
-            selector: (row: FormData) => {
-                const estado: any = estadosArqueo.find((est: any)=> est.id === row.estadoArqueo);
-                return estado.nombre;
-            },
-            width: "150px",
             right: "true",
-            sortable: true,                     
         },        
         {
-            name: 'Revisor',
-            selector: (row: FormData) => row.revisorId,
-            width: "150px",
+            name: 'Fecha',
+            selector: (row: FormData) => row.fechaMovimiento?.substring(0, 10),
+            grow: 4,
             wrap: true,
-            right: "true",            
             sortable: true,            
-        },                                            
-        {
-            name: 'Acciones',
-            selector: (row: FormData) => 
-                <div className='d-flex gap-3 justify-center align-items-center'>
-                        <div>
-                            <a href='#inicio' className={"text-warning"} title="Edita" onClick={()=>edita(row)}>
-                                <FaPencilAlt style={{width: "20px", height: "20px"}}/>
-                            </a>
-                        </div> 
-{/*                         <div>
-                            <a href='#!' className=' text-danger'  title="Borra" onClick={()=>borraSiNo(idx)}>
-                                <FaRegTrashAlt style={{width: "20px", height: "20px"}}/>
-                            </a>
-                        </div> */}
-                </div>,
-            width: "150px",
-        },                             
+        }                           
     ];
+
+    const getOption = (opt: number) => {
+        const slt = document.getElementById('idPos');
+        const opc = slt[opt];
+        return(opc.text);
+    }
 
     const handler = (e: any) => {
 
@@ -176,11 +144,23 @@ const PosMovimientoInventario= () => {
             ...apiError,
             [id]: [],
         }
-        setApiError({...apiError}); 
+        setApiError({...apiError});
     }
 
+    const handlerGenSelect = (opt: {id: string, value: string, text: string}) => {
+
+        frmData.idPos = parseInt(opt.value);
+        setFormData({ ...frmData});
+        apiError = {
+            ...apiError,
+            [opt.id]: [],
+        }
+        setApiError({...apiError});
+
+    } 
+
     const listar = async () =>{
-        const response = await httpApiGet("poscajaarqueo");
+        const response = await httpApiGet("PosMovimientoInventario");
         if (response.statusCode >= 400){
             setOperacion(false);
             mensajeModal = [...response.messages];
@@ -189,15 +169,9 @@ const PosMovimientoInventario= () => {
         }else{
             const dta: any = [];
             response.data.map((cja: any) => {
-                let obj = {};
-                //se busca el nombre del pos
-                const pos: any = sltPos.find((ps: any) => ps.id === cja.idPos);
-                //se busca el nombre de la caja                
-                const cj: any = sltCaja.find((cj: any) => cj.id === cja.idCaja);
-                //se busca el nombre del Revisor             
-                const rv: any = sltCaja.find((cj: any) => cj.id === cja.idCaja);                
-                obj = {...cja, nmPos: pos.nombre, nmCja:cj.nombre, nmRev: rv.nombre}
-                dta.push(obj);    
+                let obj = {};                
+                obj = {...cja, nmPos: getOption(cja.idPos)};
+                dta.push(obj);
             });
             data = [...dta];
             setData(data);                   
@@ -209,7 +183,7 @@ const PosMovimientoInventario= () => {
         if (!estadosVisibles){
             listar();
         }
-        setTituloBoton(!estadosVisibles ? "Ocultar Arqueos" : "Mostrar Arqueos");
+        setTituloBoton(!estadosVisibles ? "Ocultar ingresos" : "Mostrar ingresos");
         setEstadosVisibles(!estadosVisibles);
     }
 
@@ -223,109 +197,91 @@ const PosMovimientoInventario= () => {
         setFormData(frmData);
         setBtnRef("Guardar");
         setApiError(ApiErrMsg);
+        setPrd({nombre: "", descripcion:"", stock: 0});
     } 
     
     const OnbtnGuardar = async () => {
         
-        let msg = ""; 
         mensajeModal =  [];
 
         if ((frmData.idPos <= 0)){
             apiError = {
                 ...apiError,            
                 idPos:["Debe seleccionar un POS"],
-            }      
+            }
         }
 
-        if (frmData.idCaja <= 0){
+        if ((frmData.idCodigo <= 0)){
             apiError = {
                 ...apiError,            
-                idCaja:["Debe seleccionar una caja"],
-            }               
+                idCodigo:["Se requiere un valor válido"],
+            }
         }
 
-        if (frmData.valor <= 0){
+        if (frmData.cantidad <= 0){
             apiError = {
                 ...apiError,            
-                valor:["Se requiere un valor válido"],
-            }               
-        }
-
-        if (frmData.revisorId <= 0){
-            apiError = {
-                ...apiError,            
-                revisorId:["Debe seleccionar un revisor"],
-            }               
-        }
-
-        if (frmData.estadoArqueo <= 0){
-            apiError = {
-                ...apiError,            
-                estadoArqueo:["Debe seleccionar un estado"],
+                cantidad:["Se requiere un valor válido"],
             }               
         }
         
-        if ((apiError.idCaja && (apiError.idCaja?.length > 0)) 
+        if ((apiError.idCodigo && (apiError.idCodigo?.length > 0)) 
             || (apiError.idPos && (apiError.idPos?.length > 0))  
-            || (apiError.valor && (apiError.valor?.length > 0)) 
-            || (apiError.revisorId && (apiError.revisorId?.length > 0))       
-            || (apiError.estadoArqueo && (apiError.estadoArqueo?.length > 0))         
-            ){
-            setApiError({...apiError});   
+            || (apiError.cantidad && (apiError.cantidad?.length > 0))){
+
+            setApiError({...apiError});
         }else{
+            frmData.createdAt = getFechaYhora();
+            frmData.updatedAt = getFechaYhora();
+            console.log(frmData);
             
-            if (btnRef === "Guardar"){
-                frmData.createdAt = fechaYhora;
-                frmData.updateAt = fechaYhora;
-                frmData.fechaArqueo = fechaYhora;
-
-                //Consumir service de /PosTipoIdCliente, método Post
-                const response = await httpApiPPPD("PosCajaArqueo", "POST", {
-                    "Content-Type" : "application/json"
-                }, frmData);
-
-                if (response.statusCode >= 400){
-                    setOperacion(false);
-                    mensajeModal = [...response.messages];
-
-                }else{
-                    setOperacion(true);
-                    // actualiza la grilla
-                    estadosVisibles && listar();
-                    msg = "Se ha creado la informacioón exitosamente!!!";
-                    mensajeModal.push(msg);
-                    OnbtnLimpiar();
-                }  
+            if (prd.nombre === ""){
+                mensajeModal = ["Seleccione un producto y pulse buscar"];
+                setOperacion(false);
+                setMensajeModal([...mensajeModal]);
+                setShowInfo(true);    
             }else{
-                frmData.updateAt = fechaYhora;
-                //Consumir service de /PosTipoIdCliente, método Put
-                const response = await httpApiPPPD(`PosCajaArqueo/${frmData.id}`, "PUT", {
+                //Consumir service de /PosTipoIdCliente, método Post
+                const response = await httpApiPPPD("PosMovimientoInventario", "POST", {
                     "Content-Type" : "application/json"
                 }, frmData);
-                if (response.statusCode >= 400){
-                    setOperacion(false);
-                    mensajeModal = [...response.messages];
-                }else{
-                    setOperacion(true);
-                    // actualiza la grilla
-                    if (estadosVisibles){
-                        listar();
-                    }
-                    msg = "Se ha actualizado la información exitosamente!!!"
-                    mensajeModal.push(msg);
-                    OnbtnLimpiar();
-                }  
-            }
 
-            setMensajeModal(mensajeModal);            
-            setShowInfo(true);
+                if (response.statusCode >= 400){
+                    mensajeModal = [...response.messages];
+                    setOperacion(false);
+                }else{
+                    mensajeModal = ["Movimiento registrado con éxito!!!"];
+                    setOperacion(true);
+                }
+                setMensajeModal([...mensajeModal]);
+                setShowInfo(true);                   
+            }
         }
     }  
 
-    const edita = (row: any) =>{
-        setFormData({...row});
-        setBtnRef("Actualizar");
-    };
+    const buscaProducto = async () =>{
+
+        const response = await httpApiGet(`inventarioproducto/getProducto/${frmData.idCodigo}`);
+
+        if (response.statusCode >= 400){
+            console.log("Código del producto no encontrado!!");                        
+        }else{      
+            let cant = 0;
+            prd.nombre = response.data[0].nombre;
+            prd.descripcion = response.data[0].descripcion;  
+
+            // trae la cantidad de stock del ineventario del POS
+            const responseInvPos = await httpApiGet(`Posinventarioproducto/getProducto/${frmData.idCodigo}`);
+            if (responseInvPos.statusCode >= 400){
+                console.log("Código del producto no encontrado!!"); 
+            }else{
+                cant =  responseInvPos.data.length > 0 ? responseInvPos.data[0].cantidad : 0;                 
+            }
+     
+            prd.stock =  cant;
+            setPrd({...prd});
+        }    
+    }
 
     useEffect(()=>{
 
@@ -344,23 +300,10 @@ const PosMovimientoInventario= () => {
             }
         }
 
-        const getCajas = async ()=>{
-            const response = await httpApiGet("PosCaja");
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                mensajeModal = [...response.messages];
-    
-                setMensajeModal(mensajeModal);            
-                setShowInfo(true);
-            }else{
-                const fltr: any = response.data.filter(obj => obj.estado !== 1);
-                sltCaja = [...fltr];
-                setSltCaja(sltCaja);                   
-            }
-        }        
-
         getTipoIdPos();
-        getCajas();
+
+        frmData.fechaMovimiento = getFechaYhora();
+        setFormData({...frmData})
 
     }, []); 
 
@@ -371,45 +314,48 @@ const PosMovimientoInventario= () => {
                 <div  className='d-flex justify-content-evenly align-items-center bg-body-tertiary'>
                     <div className="border p-1 rounded w-100" style={{"color": "#2A3482"}}>
                         <a id="inicio"></a>
-                        <label htmlFor="" className="h3 p-2 m-2">Movimiento de inventario</label>
+                        <label htmlFor="" className="h3 p-2 m-2">Ingreso de inventario</label>
                         <form className='row border p-2 m-2'>
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="idPos" className="form-label">* Pos</label>                
-                                <select className="form-select" aria-label="Default select example" id="idPos" value={frmData.idPos} onChange={handler}  disabled={(btnRef == "Actualizar")}>
-                                    <option value="0" >Seleccione POS</option>
-                                    {
-                                        sltPos.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.nombre}`}</option>)
-                                    }    
-                                </select>
+                                <GenericSelect 
+                                    Url="SedePos" 
+                                    ValueField="id"
+                                    ValueText="nombre"
+                                    Value={`${frmData.idPos}`} 
+                                    onSelect={handlerGenSelect} 
+                                    ClassName="form-select" 
+                                    id={`idPos`}
+                                />  
                                 <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
                             </div> 
                             <div className="row ">
                                 <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="valor" className="form-label">* Código producto</label>                  
-                                    <div className=" d-flex">
-                                        <input type="number" className="form-control text-end" id="codigo"  placeholder="" value={frmData.idCodigo} onChange={handler} /> 
-                                        <Button className="border-0 bg-secondary"> <FaSearch /></Button>  
-                                        <Alert show={apiError.idCodigo && apiError.idCodigo.length > 0} alert="#F3D8DA" msg={apiError.idCodigo} />                                                                             
+                                    <div className=" d-flex ">
+                                        <input type="number" className="form-control text-end" id="idCodigo" min={0} placeholder="" value={frmData.idCodigo} onChange={handler} /> 
+                                        <Button className="border-0 bg-secondary" onClick={buscaProducto} disabled={frmData.idCodigo < 1}> <FaSearch /></Button>                                                                              
                                     </div>
+                                    <Alert show={apiError.idCodigo && apiError.idCodigo.length > 0} alert="#F3D8DA" msg={apiError.idCodigo} /> 
                                 </div> 
                                 <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="valor" className="form-label">Descripción</label>                  
-                                    <input type="text" className="form-control text-end" id="valor"  value={frmData.descripcion} disabled/>                                 
+                                    <label htmlFor="" className="form-label">Descripción</label>                  
+                                    <input type="text" className="form-control " value={`${prd.nombre} - ${prd.descripcion}`} disabled/>                                 
                                 </div>
                                 <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="valor" className="form-label">Stock</label>                  
-                                    <input type="text" className="form-control text-end" id="valor" value={frmData.stock} disabled/>                                 
+                                    <label htmlFor="" className="form-label">Stock</label>                  
+                                    <input type="text" className="form-control text-end" value={prd.stock} disabled/>                                 
                                 </div>                                
                             </div>
                             <div className="row ">
                                 <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="valor" className="form-label">* Cantidad</label>                  
-                                    <input type="number" className="form-control text-end" id="valor"  placeholder="" value={frmData.cantidad} onChange={handler} /> 
+                                    <label htmlFor="cantidad" className="form-label">* Cantidad</label>                  
+                                    <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler} /> 
                                     <Alert show={apiError.cantidad && apiError.cantidad.length > 0} alert="#F3D8DA" msg={apiError.cantidad} />                                                                             
                                 </div> 
                                 <div className="col-lg-4 col-md-12 col-sm-12 mb-3 offset-4">
-                                    <label htmlFor="valor" className="form-label">Fecha</label>                  
-                                    <input type="text" className="form-control text-end" id="valor" value={frmData.fechaMovimiento} disabled/>                                 
+                                    <label htmlFor="fechaMovimiento" className="form-label">Fecha</label>                  
+                                    <input type="text" className="form-control text-end" id="fechaMovimiento" value={frmData.fechaMovimiento?.substring(0, 10)} disabled/>                                 
                                 </div>                                
                             </div>
                             <div className="row d-flex justify-content-center">
@@ -431,45 +377,35 @@ const PosMovimientoInventario= () => {
                             }                            
                         </div> 
                         {
-                        estadosVisibles && (
-                                <div className="ms-2 mt-3 p-2 border rounded">          
-                                    <DataTable 
-                                        title="Historial de arqueos"
-                                        className="border rounded"
-                                        columns={columnas}
-                                        data={data} 
-                                        pagination
-                                        highlightOnHover
-                                        fixedHeader={true}
-                                        paginationComponentOptions={pagOptions}    
-                                        customStyles={customStyles}
-                                        conditionalRowStyles={conditionalRowStyles} 
-                                        progressPending={pending}
-                                        progressComponent={loader()}             
-                                    />
-                                </div>                  
-                        )
+                            estadosVisibles && (
+                                    <div className="ms-2 mt-3 p-2 border rounded">          
+                                        <DataTable 
+                                            title="Historial de ingresos"
+                                            className="border rounded"
+                                            columns={columnas}
+                                            data={data} 
+                                            pagination
+                                            highlightOnHover
+                                            fixedHeader={true}
+                                            paginationComponentOptions={pagOptions}    
+                                            customStyles={customStyles}
+                                            conditionalRowStyles={conditionalRowStyles} 
+                                            progressPending={pending}
+                                            progressComponent={loader()}             
+                                        />
+                                    </div>                  
+                            )
                         }           
-                    { showYesNo && <MsgYesNoDialog
-                            Title='Tipos de estados de la Caja'
-                            Message={`Este proceso cambia el estado de la caja, lo deshabilita si está habilitado o visceversa. ¿Quiere cambiarlo?`}
-                            Icon='X'
-                            BtnOkName='Sí, continuar'
-                            BtnNokName='No, cancelar'
-                            Show={showYesNo}
-                            HanlerdClickNok={()=> setShowYesNo(false)}
-                            HandlerClickOk={()=>borra()}
-                            size="lg"
-                        /> } 
                         { showInfo && <MsgDialog
-                            Title='Tipos de estados de la Caja'
+                            Title='Ingreso de inventario'
                             Message={mensajeModal}
                             Icon={operacion}
                             BtnOkName='Aceptar'
                             BtnNokName=''
                             Show={showInfo}
                             HandlerdClickOk={() => setShowInfo(false)}
-                            HandlerdClickNok={null} size={"lg"}                        />}
+                            HandlerdClickNok={null} size={"lg"}                        
+                        />}
                     </div>            
                 </div>
                 <div className='d-flex align-items-center justify-content-center ' style={{backgroundColor: "#2A3482"}}>

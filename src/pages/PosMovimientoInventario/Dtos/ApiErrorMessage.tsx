@@ -3,12 +3,10 @@
 // de la Api con mensajes de error
 
 interface ApiErrorMessage {
-    idCaja?         : string[];    
+    idCodigo?       : string[];    
     idPos?          : string[];   
-    valor?          : string[];
-    fechaArqueo?    : string[];       
-    revisorId?      : string[]; 
-    estadoArqueo?   : string[];            
+    cantidad?       : string[];
+    fechaMovimiento?: string[];          
 }
 
 export default ApiErrorMessage;
