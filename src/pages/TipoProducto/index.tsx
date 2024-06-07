@@ -6,7 +6,7 @@ import Alert from "../../component/Alert";
 import MsgYesNoDialog from "../../component/MsgYesNoDialog";
 import ApiErrorMessage from "./Dtos/ApiErrorMessage";
 import FormData from "./Dtos/FormData";
-import { formatDate, httpApiGet, httpApiPPPD } from "../../lib";
+import { formatDate, getFechaYhora, httpApiGet, httpApiPPPD } from "../../lib";
 import MsgDialog from "../../component/MsgDialog";
 import BarraMenu from "../../component/BarraMenu";
 
@@ -78,31 +78,26 @@ const TipoProducto = () => {
     const [id, setId] = useState(form);   
     const [btnRef, setBtnRef] = useState("Guardar");      
 
-    // Obtiene la fecha y hora actual en formato YYYY-MM-DDTHH:MM:SS
-    const hh = (new Date().getHours()) < 10 ? `0${new Date().getHours()}`:`${new Date().getHours()}`;
-    const mm = (new Date().getMinutes()) < 10 ? `0${new Date().getMinutes()}`:`${new Date().getMinutes()}`; 
-    const fechaYhora = `${formatDate(new Date())}T${hh}:${mm}:00`;
-
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
         {
             name: 'Id',
             selector: (row: any) => row.id,
-            width: "70px",
             sortable: true,
             right: "true",
+            grow: 1
         },  
         {
             name: 'Nombre',
             selector: (row: any) => row.nombre,
-            width: "120px",
+            grow: 2,
             wrap: true,
             sortable: true,
         }, 
         {
             name: 'Descripción',
             selector: (row: any) => row.descripcion,
-            width: "250px",
+            grow: 6,
             wrap: true,
             sortable: true,            
         },                      
@@ -196,8 +191,8 @@ const TipoProducto = () => {
         }else{
             
             if (btnRef === "Guardar"){
-                frmData.createdAt = fechaYhora;
-                frmData.updatedAt = fechaYhora;
+                frmData.createdAt = getFechaYhora();
+                frmData.updatedAt = getFechaYhora();
 
                 //Consumir service de /PosTipoIdCliente, método Post
                 const response = await httpApiPPPD("PosTipoProducto", "POST", {
@@ -219,7 +214,7 @@ const TipoProducto = () => {
                     OnbtnLimpiar();
                 }  
             }else{
-                frmData.updatedAt = fechaYhora;
+                frmData.updatedAt = getFechaYhora();
                 //Consumir service de /PosTipoIdCliente, método Put
                 const response = await httpApiPPPD(`PosTipoProducto/${frmData.id}/${frmData.nombre}`, "PUT", {
                     "Content-Type" : "application/json"

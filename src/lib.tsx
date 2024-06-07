@@ -52,7 +52,7 @@ export async function httpApiGet(endp: string) {
                     "content-type": "application/json; charset=utf-8"
                 }
 
-        });     
+        });  
         const data = await response.json();
         return (data);
     }
@@ -76,3 +76,26 @@ export function formatDate(date: Date) {
     ].reverse().join('-');
 }
 // Fin funcione sde apoyo
+
+export const getFechaYhora = () =>{
+
+    // Obtiene la fecha y hora actual en formato YYYY-MM-DDTHH:MM:SS
+    const hh = (new Date().getHours()) < 10 ? `0${new Date().getHours()}`:`${new Date().getHours()}`;
+    const mm = (new Date().getMinutes()) < 10 ? `0${new Date().getMinutes()}`:`${new Date().getMinutes()}`; 
+    const fechaYhora = `${formatDate(new Date())}T${hh}:${mm}:00`;   
+
+    return (fechaYhora);
+}
+
+export const getTipoNameByid = (id: number, lista: []) =>{
+    
+    let nm = "";    
+    lista.map((element: any) => {
+        if (id === element.id){
+            nm = element.nombre;
+            return;
+        }
+    });
+
+    return (nm);
+}
