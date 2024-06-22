@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "react-bootstrap";
 import DataTable from "react-data-table-component";
-import { FaPencilAlt, FaSearch } from "react-icons/fa";
+import { FaSearch } from "react-icons/fa";
 import Alert from "../../component/Alert";
 import ApiErrorMessage from "./Dtos/ApiErrorMessage";
 import FormData from "./Dtos/FormData";
@@ -198,6 +198,10 @@ const PosMovimientoInventario= () => {
         setBtnRef("Guardar");
         setApiError(ApiErrMsg);
         setPrd({nombre: "", descripcion:"", stock: 0});
+
+        
+        frmData.fechaMovimiento = getFechaYhora();
+        setFormData({...frmData});
     } 
     
     const OnbtnGuardar = async () => {
@@ -232,8 +236,7 @@ const PosMovimientoInventario= () => {
             setApiError({...apiError});
         }else{
             frmData.createdAt = getFechaYhora();
-            frmData.updatedAt = getFechaYhora();
-            console.log(frmData);
+            frmData.updatedAt = frmData.createdAt;
             
             if (prd.nombre === ""){
                 mensajeModal = ["Seleccione un producto y pulse buscar"];
@@ -261,26 +264,36 @@ const PosMovimientoInventario= () => {
 
     const buscaProducto = async () =>{
 
-        const response = await httpApiGet(`inventarioproducto/getProducto/${frmData.idCodigo}`);
+        if (frmData.idPos < 1){
+            setOperacion(false);
+            setMensajeModal(["Debe seleccionar un Pos para buscar el producto!!"]);
+            setShowInfo(true);
+        }else{
+            console.log(`inventarioproducto/getProducto/${frmData.idCodigo}`);
+            const response = await httpApiGet(`inventarioproducto/getProducto/${frmData.idCodigo}`);
+            if (response.statusCode >= 400){
+                setOperacion(false);
+                setMensajeModal(["Código del producto no encontrado!!"]);
+                setShowInfo(true);
+            }else{      
+                let cant = 0;
+                prd.nombre = response.data[0].nombre;
+                prd.descripcion = response.data[0].descripcion;  
 
-        if (response.statusCode >= 400){
-            console.log("Código del producto no encontrado!!");                        
-        }else{      
-            let cant = 0;
-            prd.nombre = response.data[0].nombre;
-            prd.descripcion = response.data[0].descripcion;  
-
-            // trae la cantidad de stock del ineventario del POS
-            const responseInvPos = await httpApiGet(`Posinventarioproducto/getProducto/${frmData.idCodigo}`);
-            if (responseInvPos.statusCode >= 400){
-                console.log("Código del producto no encontrado!!"); 
-            }else{
-                cant =  responseInvPos.data.length > 0 ? responseInvPos.data[0].cantidad : 0;                 
-            }
-     
-            prd.stock =  cant;
-            setPrd({...prd});
-        }    
+                console.log(`Posinventarioproducto/Pos/${frmData.idPos}/GetByProductoId/${frmData.idCodigo}`);
+                // trae la cantidad de stock del ineventario del POS
+                const responseInvPos = await httpApiGet(`Posinventarioproducto/Pos/${frmData.idPos}/GetByProductoId/${frmData.idCodigo}`);
+                console.log("Response: ", responseInvPos);
+                if (responseInvPos.statusCode >= 400){
+                    console.log("Código del producto no encontrado!!"); 
+                }else{
+                    cant =  responseInvPos.data.length > 0 ? responseInvPos.data[0].cantidad : 0;                 
+                }
+        
+                prd.stock =  cant;
+                setPrd({...prd});
+            }                
+        }
     }
 
     useEffect(()=>{
@@ -334,7 +347,7 @@ const PosMovimientoInventario= () => {
                                     <label htmlFor="valor" className="form-label">* Código producto</label>                  
                                     <div className=" d-flex ">
                                         <input type="number" className="form-control text-end" id="idCodigo" min={0} placeholder="" value={frmData.idCodigo} onChange={handler} /> 
-                                        <Button className="border-0 bg-secondary" onClick={buscaProducto} disabled={frmData.idCodigo < 1}> <FaSearch /></Button>                                                                              
+                                        <Button className="border-0 bg-secondary" onClick={buscaProducto} disabled={(frmData.idPos < 0) && (frmData.idCodigo < 1)}> <FaSearch /></Button>                                                                              
                                     </div>
                                     <Alert show={apiError.idCodigo && apiError.idCodigo.length > 0} alert="#F3D8DA" msg={apiError.idCodigo} /> 
                                 </div> 

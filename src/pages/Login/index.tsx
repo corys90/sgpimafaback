@@ -14,7 +14,7 @@ import { SetEntornoEmp } from '../../redux/store/Actions';
 const PageLogin = () => {
 
     const dispatch = useDispatch();
-    let [formData, setFormData] = useState({user:"", pass:"", valid: "login"});
+    let [formData, setFormData] = useState({user:"Prueba", pass:"prueba", valid: "login"});
     const navigate = useNavigate();
     const [msgDlgShow, setMsgDlgShow] = useState(false);
     const [msgAlrtUsr, setMsgAlrtUsr] = useState(false);
