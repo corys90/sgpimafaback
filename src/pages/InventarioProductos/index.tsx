@@ -448,7 +448,7 @@ const InventarioProductos = () => {
 
                         <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                             <label htmlFor="nombre" className="form-label">* Cantidad</label>                  
-                            <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler}/>
+                            <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler} disabled/>
                             <Alert show={apiError.cantidad && apiError.cantidad.length > 0} alert="#F3D8DA" msg={apiError.cantidad} />
                         </div> 
 

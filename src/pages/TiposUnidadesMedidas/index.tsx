@@ -284,7 +284,7 @@ const TiposUnidadesMedidas = () => {
                         <label htmlFor="" className="h3 p-2 m-2">Unidades de medidas</label>
                         <form className='row border p-2 m-2'>
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                                <label htmlFor="nombre" className="form-label">* Nombre del unidad</label>                
+                                <label htmlFor="nombre" className="form-label">* Nombre de la unidad</label>                
                                 <input type="text" className="form-control" id="nombre" placeholder="" value={frmData.nombre} onChange={handler} disabled={(btnRef == "Actualizar")}/>
                                 <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre}/>
                             </div>

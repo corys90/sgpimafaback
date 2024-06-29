@@ -22,7 +22,7 @@ const customStyles = {
     header: {
         style: {
             color: "#2A3482",
-            fontSize: "32px",
+            fontSize: "22px",
         },
     },
     headRow:{
@@ -66,7 +66,7 @@ const ApiErrMsg: ApiErrorMessage = {
 const TiposDeEmbalajes = () => {
     
     const [estadosVisibles, setEstadosVisibles] = useState(false);
-    const [tituloBoton, setTituloBoton] = useState("Mostrar los tipos de embalajes");
+    const [tituloBoton, setTituloBoton] = useState("Mostrar los tipos");
     let [frmData, setFormData] = useState(form);    
     const [pending, setPending] = useState(false); 
     // eslint-disable-next-line prefer-const
@@ -157,7 +157,7 @@ const TiposDeEmbalajes = () => {
         if (!estadosVisibles){
             listar();
         }
-        setTituloBoton(!estadosVisibles ? "Ocultar los tipos de embalajes" : "Mostrar los tipos de embalajes");
+        setTituloBoton(!estadosVisibles ? "Ocultar los tipos" : "Mostrar los tipos");
         setEstadosVisibles(!estadosVisibles);
     }
 
