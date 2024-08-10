@@ -234,8 +234,8 @@ const InventarioProductos = () => {
         const inputsArray = Object.entries(frmData);
         const clearInputsArray = inputsArray.map(([key]) => [key, '']); // Recorremos el arreglo y retornamos un nuevo arreglo de arreglos conservando el key
         const inputsJson = Object.fromEntries(clearInputsArray); //Convertimos el arreglo de arreglos nuevamente a formato json
-        frmData = {...inputsJson, id: 0, idPos: 0, idCodigo: 0, tipoProducto: 0, idProductoCompuesto: 0,
-            cantidad: 0, valorUnitario: 0, unidadMedida: 0, tamano: 0, peso: 0, embalaje: 0, temperatura: 0, 
+        frmData = {...inputsJson, id: 0,idCodigo: 0, tipoProducto: 0, idProductoCompuesto: 0,
+            cantidad: 0, valorUnitario: 0, unidadMedida: 0, tamano: "", peso: 0, embalaje: 0, temperatura: 0, 
             stockMinimo: 0, descuento: 0, impuesto: 0, valorImp: 0, diasVencimiento: 0                        
         }
         setFormData(frmData);
@@ -448,7 +448,7 @@ const InventarioProductos = () => {
 
                         <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                             <label htmlFor="nombre" className="form-label">* Cantidad</label>                  
-                            <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler}/>
+                            <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler} disabled/>
                             <Alert show={apiError.cantidad && apiError.cantidad.length > 0} alert="#F3D8DA" msg={apiError.cantidad} />
                         </div> 
 
