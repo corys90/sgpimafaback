@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { httpApiGet } from "../../lib";
 
-const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onSelect: any,
-                              ValueField: string, ValueText: string, id: string}) =>{
+const GenericSelectPersonalized = (props:{Url: string, Value: string, ClassName: string, onSelect: any,
+                              ValueField: string, ValueText: string, id: string, all: string}) =>{
 
     const [sltPos, setSltPos] = useState([]);
     const [placeholder, setPlaceHolder] = useState("Cargando...");
     const [value, setValue] = useState({id: "", value: props.Value, text: ""});
+    let [lastItems, setLastitems] = useState(0);
 
     const getApi = async ()=>{
         const response = await httpApiGet(props.Url);
@@ -15,7 +16,9 @@ const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onS
         }else{
             if (response.data.length > 0){
                 setPlaceHolder("Seleccione opción");
-                setSltPos(response.data);                
+                setSltPos(response.data);  
+                lastItems = response.data.length + 1;    
+                setLastitems(lastItems);          
             }else{
                 setPlaceHolder("No hay datos...");             
             }  
@@ -29,7 +32,7 @@ const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onS
         value.text = e.target.options[e.target.options.selectedIndex].text;
         setValue({...value});
 
-        props.onSelect(value);
+        props.onSelect(value, sltPos.length + 1);
     }
 
     useEffect(()=>{
@@ -47,13 +50,15 @@ const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onS
                 title={placeholder}
                 defaultValue={-2}
             >
-                <option value="0" >{placeholder} </option>
+                <option value="0" >{placeholder} </option>       
+                <option value={lastItems} >{props.all}</option>                                   
                 {
                     sltPos.map((opc: any, idx: number )=> <option key={idx} value={opc[props.ValueField]} >{`${opc[props.ValueText]}`}</option>)
-                }                          
+                }  
+                                     
             </select>
         </>
     );
 }
 
-export default GenericSelect;
+export default GenericSelectPersonalized;

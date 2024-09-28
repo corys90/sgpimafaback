@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "react-bootstrap";
 import DataTable from "react-data-table-component";
 import { FaPencilAlt } from "react-icons/fa";
@@ -6,8 +6,9 @@ import Alert from "../../component/Alert";
 import ApiErrorMessage from "../PosInventarioProductos/Dto/ApiErrorMessage";
 import FormData from "../PosInventarioProductos/Dto/FormData";
 import MsgDialog from "../../component/MsgDialog";
-import { formatDate, getFechaYhora, httpApiGet, httpApiPPPD} from "../../lib";
+import { exportToExcel, getFechaYhora, httpApiGet, httpApiPPPD} from "../../lib";
 import BarraMenu from "../../component/BarraMenu";
+import FooterBar from "../../component/FooterBar";
 import GenericSelect from "../../component/GenericSelect";
 
 const pagOptions = {
@@ -21,14 +22,14 @@ const customStyles = {
     header: {
         style: {
             color: "#2A3482",
-            fontSize: "22px",
+            fontSize: "20px",
         },
     },
     headRow:{
         style: {
             color: "#2A3482",
             background:"#F5F5F5",
-            fontSize: "16px",
+            fontSize: "14px",
         },
     },
 }; 
@@ -68,7 +69,7 @@ const form: FormData = {
     stockMinimo         : 0,
     descuento           : 0,
     impuesto            : 0,
-    valorImp            : 0,
+    valorIva            : 0,
     fechaCreacion       : "",
     diasVencimiento     : 0,
     fechaVencimiento    : "",
@@ -100,7 +101,8 @@ const InventarioProductos = () => {
     const [showInfo, setShowInfo] = useState(false);    
     const [operacion, setOperacion] = useState(false); 
     let [mensajeModal, setMensajeModal] = useState([]);       
-    const [btnRef, setBtnRef] = useState("Guardar");                     
+    const [btnRef, setBtnRef] = useState("Guardar");         
+    const fltr = useRef(null);            
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
@@ -116,14 +118,14 @@ const InventarioProductos = () => {
             selector: (row: FormData) => row.nombre,
             wrap: true,
             sortable: true,
-            grow: 2
+            width: "180px",  
         },   
         {
             name: 'Descripción ',
             selector: (row: FormData) => row.descripcion,
             wrap: true,
             sortable: true,
-            grow: 3
+            width: "350px",  
         },               
         {
             name: 'Cant.',
@@ -138,7 +140,7 @@ const InventarioProductos = () => {
             sortable: true,    
             format: (row: FormData) => row.valorUnitario.toLocaleString(),    
             right: true.toString(),  
-            grow: 2                                   
+            width: "110px",                                    
         }, 
         {
             name: 'Imp.(%)',
@@ -153,7 +155,7 @@ const InventarioProductos = () => {
             selector: (row: FormData) => row.descuento,
             sortable: true,     
             right: true.toString(), 
-            grow: 2                         
+            width: "110px",                          
         },          
         {
             name: 'Cmpto',
@@ -207,7 +209,6 @@ const InventarioProductos = () => {
             const dta: any = [];
             response.data.map((prd: any) => {
                 let obj = {};          
-                //const pcs: any = sltPrdCmp.find((pc: any) => pc.id === prd.idProductoCompuesto);
                 obj = {...prd, nmPrdCmp: getOption(prd.idProductoCompuesto)};
                 dta.push(obj);    
             });
@@ -231,21 +232,13 @@ const InventarioProductos = () => {
     const OnbtnLimpiar = () => {
         
         // borra las cajas de datos de entrada
-        const inputsArray = Object.entries(frmData);
-        const clearInputsArray = inputsArray.map(([key]) => [key, '']); // Recorremos el arreglo y retornamos un nuevo arreglo de arreglos conservando el key
-        const inputsJson = Object.fromEntries(clearInputsArray); //Convertimos el arreglo de arreglos nuevamente a formato json
-        frmData = {...inputsJson, id: 0,idCodigo: 0, tipoProducto: 0, idProductoCompuesto: 0,
-            cantidad: 0, valorUnitario: 0, unidadMedida: 0, tamano: "", peso: 0, embalaje: 0, temperatura: 0, 
-            stockMinimo: 0, descuento: 0, impuesto: 0, valorImp: 0, diasVencimiento: 0                        
-        }
-        setFormData(frmData);
+        setFormData({...form});
         setBtnRef("Guardar");
         setApiError(ApiErrMsg);
     } 
     
     const OnbtnGuardar = async () => {
         
-        console.log(frmData);
         let msg = ""; 
         mensajeModal =  [];
 
@@ -300,11 +293,11 @@ const InventarioProductos = () => {
         }else{
             if (btnRef === "Guardar"){
                 frmData.createdAt = getFechaYhora();
-                frmData.updateAt = getFechaYhora();
+                frmData.updatedAt = getFechaYhora();
                 frmData.fechaCreacion = getFechaYhora();
                 // calcular aquí la fecha de vencimiento según fecha de creación
                 frmData.fechaVencimiento = getFechaYhora();
-
+                
                 //Consumir service de /Posinventarioproducto, método Post
                 const response = await httpApiPPPD(`inventarioproducto`, "POST", {
                     "Content-Type" : "application/json"
@@ -317,14 +310,13 @@ const InventarioProductos = () => {
                 }else{
                     setOperacion(true);
                     // actualiza la grilla
-                    estadosVisibles && listar();
+                    estadosVisibles && await listar();
                     msg = "Se ha creado la informacioón exitosamente!!!";
                     mensajeModal.push(msg);
-                    OnbtnLimpiar();
                 }  
             }else{
 
-                frmData.updateAt = getFechaYhora();                
+                frmData.updatedAt = getFechaYhora();                
                 // calcular aquí la fecha de vencimiento según fecha de creación
                 frmData.fechaVencimiento = getFechaYhora();
 
@@ -332,22 +324,23 @@ const InventarioProductos = () => {
                 const response = await httpApiPPPD(`inventarioproducto/${frmData.id}`, "PUT", {
                     "Content-Type" : "application/json"
                 }, frmData);
+
                 if (response.statusCode >= 400){
                     setOperacion(false);
                     mensajeModal = [...response.messages];
                 }else{
                     setOperacion(true);
                     // actualiza la grilla
-                    if (estadosVisibles){
-                        listar();
-                    }
+                    estadosVisibles && await listar();
                     msg = "Se ha actualizado la información del producto exitosamente!!!"
                     mensajeModal.push(msg);
-                    OnbtnLimpiar();
                 }  
             }
+
+            OnbtnLimpiar();
             setMensajeModal(mensajeModal);            
             setShowInfo(true);
+            estadosVisibles && changeTextFiltro({target:{value: `${fltr.current.value }`}});
         }
     }  
 
@@ -385,201 +378,195 @@ const InventarioProductos = () => {
 
     } 
 
+    const exportTo = () => {
+
+        exportToExcel(`InventarioGral-${getFechaYhora()}.xls`, data);
+
+    }     
+
     useEffect(()=>{       
     }, []); 
 
     return(
-        <div className=' vh-100 m-5 border rounded-3 shadow '>
-            <BarraMenu /> 
-            <div  className=' d-flex justify-content-evenly align-items-center bg-body-tertiary '>
-                <div className="border p-1 rounded " style={{"color": "#2A3482"}}>
+        <div className="container">
+            <BarraMenu />         
+            <div>
+                <div className="container border rounded " style={{"color": "#2A3482"}}>
                     <a id="inicio"></a>
-                    <label htmlFor="" className="h3 p-2 m-2">Inventario General de Productos</label>
-                    <form className='row border p-2 m-2 '>
+                    <div className="h3 pt-2 pb-2 text-center text-wrap">Inventario General de Productos</div>
 
-                        <label htmlFor="" className="m-2 h5">Datos básicos (obligatorios)</label>
-                        <hr className="pb-2" />
+                    <form >
+                        <div className='row border '>
+                            <label htmlFor="" className="m-2 h5">Datos básicos (obligatorios)</label>
+                            <hr className="pb-2" />
 
-                        <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="idCaja" className="form-label">* Código producto</label>                               
-                            <input type="number" min={0} className="form-control text-end" id="idCodigo"  placeholder="" value={frmData.idCodigo} onChange={handler}  disabled={(btnRef == "Actualizar")}/>
-                            <Alert show={apiError.idCodigo && apiError.idCodigo.length > 0} alert="#F3D8DA" msg={apiError.idCodigo}/>                    
-                        </div>    
+                            <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="idCaja" className="form-label">* Código producto</label>                               
+                                <input type="number" min={0} className="form-control text-end" id="idCodigo"  placeholder="" value={frmData.idCodigo} onChange={handler}  disabled={(btnRef == "Actualizar")}/>
+                                <Alert show={apiError.idCodigo && apiError.idCodigo.length > 0} alert="#F3D8DA" msg={apiError.idCodigo}/>                    
+                            </div>    
 
-                        <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="tipoProducto" className="form-label">* Tipo producto</label>                
-                            <GenericSelect 
-                                    Url="PosTipoProducto" 
-                                    ValueField="id"
-                                    ValueText="nombre"
-                                    Value={`${frmData.tipoProducto}`} 
-                                    onSelect={handlerGenSelect} 
-                                    ClassName="form-select" 
-                                    id={`tipoProducto`}
-                            />                            
-                            <Alert show={apiError.tipoProducto && apiError.tipoProducto.length > 0} alert="#F3D8DA" msg={apiError.tipoProducto}/>                    
-                        </div>
+                            <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="tipoProducto" className="form-label">* Tipo producto</label>                
+                                <GenericSelect 
+                                        Url="PosTipoProducto" 
+                                        ValueField="id"
+                                        ValueText="nombre"
+                                        Value={`${frmData.tipoProducto}`} 
+                                        onSelect={handlerGenSelect} 
+                                        ClassName="form-select" 
+                                        id={`tipoProducto`}
+                                />                            
+                                <Alert show={apiError.tipoProducto && apiError.tipoProducto.length > 0} alert="#F3D8DA" msg={apiError.tipoProducto}/>                    
+                            </div>
 
-                        <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="idProductoCompuesto" className="form-label">* Producto compuesto</label>                
-                            <GenericSelect 
-                                    Url="PosProductoCompuesto" 
-                                    ValueField="id"
-                                    ValueText="nombre"
-                                    Value={`${frmData.idProductoCompuesto}`} 
-                                    onSelect={handlerGenSelect} 
-                                    ClassName="form-select" 
-                                    id={`idProductoCompuesto`}
-                            />      
-                            <Alert show={apiError.idProductoCompuesto && apiError.idProductoCompuesto.length > 0} alert="#F3D8DA" msg={apiError.idProductoCompuesto}/>                    
-                        </div>  
+                            <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="idProductoCompuesto" className="form-label">* Producto compuesto</label>                
+                                <GenericSelect 
+                                        Url="PosProductoCompuesto" 
+                                        ValueField="id"
+                                        ValueText="nombre"
+                                        Value={`${frmData.idProductoCompuesto}`} 
+                                        onSelect={handlerGenSelect} 
+                                        ClassName="form-select" 
+                                        id={`idProductoCompuesto`}
+                                />      
+                                <Alert show={apiError.idProductoCompuesto && apiError.idProductoCompuesto.length > 0} alert="#F3D8DA" msg={apiError.idProductoCompuesto}/>                    
+                            </div>  
 
-                        <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">* Nombre producto</label>                  
-                            <input type="text" className="form-control" id="nombre"  placeholder="" value={frmData.nombre} onChange={handler}/>
-                            <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre} />
-                        </div>   
-
-                        <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">* Descripción</label>                  
-                            <input type="text" className="form-control" id="descripcion"  placeholder="" value={frmData.descripcion} onChange={handler}/>
-                            <Alert show={apiError.descripcion && apiError.descripcion.length > 0} alert="#F3D8DA" msg={apiError.descripcion} />
-                        </div> 
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">* Cantidad</label>                  
-                            <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler} disabled/>
-                            <Alert show={apiError.cantidad && apiError.cantidad.length > 0} alert="#F3D8DA" msg={apiError.cantidad} />
-                        </div> 
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">* Valor unitario ($)</label>                  
-                            <input type="number" className="form-control text-end" id="valorUnitario"  placeholder="" value={frmData.valorUnitario} onChange={handler}/>
-                            <Alert show={apiError.valorUnitario && apiError.valorUnitario.length > 0} alert="#F3D8DA" msg={apiError.valorUnitario} />
-                        </div>                                  
-        
-                        <label htmlFor="" className="m-2 h5">Información adicional</label>
-                        <hr />
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="estado" className="form-label">Unidad de medida</label>                
-                            <GenericSelect 
-                                    Url="PosUnidadesMedida" 
-                                    ValueField="id"
-                                    ValueText="nombre"
-                                    Value={`${frmData.unidadMedida}`} 
-                                    onSelect={handlerGenSelect} 
-                                    ClassName="form-select" 
-                                    id={`unidadMedida`}
-                            /> 
-                            {/* <Alert show={apiError.unidadMedida && apiError.unidadMedida.length > 0} alert="#F3D8DA" msg={apiError.unidadMedida}/>    */}                 
-                        </div> 
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Lote</label>                  
-                            <input type="text" className="form-control" id="lote"  placeholder="" value={frmData.lote} onChange={handler}/>
-        {/*                     <Alert show={apiError.lote && apiError.lote.length > 0} alert="#F3D8DA" msg={apiError.lote} /> */}
-                        </div>  
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Color</label>                  
-                            <input type="text" className="form-control" id="color"  placeholder="" value={frmData.color} onChange={handler}/>
-        {/*                     <Alert show={apiError.color && apiError.color.length > 0} alert="#F3D8DA" msg={apiError.color} /> */}
-                        </div>
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Olor</label>                  
-                            <input type="text" className="form-control" id="olor"  placeholder="" value={frmData.olor} onChange={handler}/>
-        {/*                     <Alert show={apiError.olor && apiError.olor.length > 0} alert="#F3D8DA" msg={apiError.olor} /> */}
-                        </div>   
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Textura</label>                  
-                            <input type="text" className="form-control" id="textura"  placeholder="" value={frmData.textura} onChange={handler}/>
-                            {/* <Alert show={apiError.textura && apiError.textura.length > 0} alert="#F3D8DA" msg={apiError.textura} /> */}
-                        </div>   
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Tamaño (cms)</label>                  
-                            <input type="text" className="form-control text-end" id="tamano"  placeholder="" value={frmData.tamano} onChange={handler}/>
-                            {/* <Alert show={apiError.tamano && apiError.tamano.length > 0} alert="#F3D8DA" msg={apiError.tamano} /> */}
-                        </div>   
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Peso (Grms)</label>                  
-                            <input type="number" className="form-control text-end" id="peso"  placeholder="" value={frmData.peso} onChange={handler}/>
-        {/*                     <Alert show={apiError.peso && apiError.peso.length > 0} alert="#F3D8DA" msg={apiError.peso} /> */}
-                        </div> 
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="estado" className="form-label">Embalaje</label>                
-                            <GenericSelect 
-                                    Url="PosTipoEmbalaje" 
-                                    ValueField="id"
-                                    ValueText="descripcion"
-                                    Value={`${frmData.embalaje}`} 
-                                    onSelect={handlerGenSelect} 
-                                    ClassName="form-select" 
-                                    id={`embalaje`}
-                            />  
-        {/*                     <Alert show={apiError.embalaje && apiError.embalaje.length > 0} alert="#F3D8DA" msg={apiError.embalaje}/>    */}                 
-                        </div> 
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Temperatura (°C)</label>                  
-                            <input type="number" className="form-control text-end" id="temperatura"  placeholder="" value={frmData.temperatura} onChange={handler}/>
-                            {/* <Alert show={apiError.temperatura && apiError.temperatura.length > 0} alert="#F3D8DA" msg={apiError.temperatura} /> */}
-                        </div>
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Stock Mínimo</label>                  
-                            <input type="number" className="form-control text-end" id="stockMinimo"  placeholder="" value={frmData.stockMinimo} onChange={handler}/>
-        {/*                     <Alert show={apiError.stockMinimo && apiError.stockMinimo.length > 0} alert="#F3D8DA" msg={apiError.stockMinimo} /> */}
-                        </div> 
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Descuento (%)</label>                  
-                            <input type="number" className="form-control text-end" id="descuento"  placeholder="" value={frmData.descuento} onChange={handler}/>
-        {/*                     <Alert show={apiError.descuento && apiError.descuento.length > 0} alert="#F3D8DA" msg={apiError.descuento} /> */}
-                        </div>  
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Impuestos (%)</label>                  
-                            <input type="number" className="form-control text-end" id="impuesto"  placeholder="" value={frmData.impuesto} onChange={handler}/>
-        {/*                     <Alert show={apiError.impuesto && apiError.impuesto.length > 0} alert="#F3D8DA" msg={apiError.impuesto} /> */}
-                        </div> 
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Valor Impuesto ($)</label>                  
-                            <input type="number" className="form-control text-end" id="valorImp"  placeholder="" value={frmData.valorImp} onChange={handler} disabled/>
-                            {/* <Alert show={apiError.valorImp && apiError.valorImp.length > 0} alert="#F3D8DA" msg={apiError.valorImp} /> */}
-                        </div> 
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Fecha de creación</label>                  
-                            <input type="date" className="form-control" id="fechaCreacion"  placeholder="" value={frmData.fechaCreacion} onChange={handler}/>
-        {/*                     <Alert show={apiError.fechaCreacion && apiError.fechaCreacion.length > 0} alert="#F3D8DA" msg={apiError.fechaCreacion} /> */}
-                        </div> 
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Días de vencimiento</label>                                                                                                                                                                    
-                            <input type="number" className="form-control text-end" id="diasVencimiento"  placeholder="" value={frmData.diasVencimiento} onChange={handler}/>
-        {/*                     <Alert show={apiError.diasVencimiento && apiError.diasVencimiento.length > 0} alert="#F3D8DA" msg={apiError.diasVencimiento} /> */}
-                        </div> 
-
-                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                            <label htmlFor="nombre" className="form-label">Fecha de Vencimiento</label>                  
-                            <input type="date" className="form-control" id="fechaVencimiento"  placeholder="" value={frmData.fechaVencimiento} onChange={handler} disabled/>
-                        </div>
-
-                        <div className="row d-flex justify-content-center">
-                            <div className="col-lg-4 col-md-12 col-sm-12 ">
-                                <Button className="m-1 p-2 btn-success w-100" id="btnGuardar" onClick={OnbtnGuardar}  >{btnRef}</Button>   
+                            <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">* Nombre producto</label>                  
+                                <input type="text" className="form-control" id="nombre"  placeholder="" value={frmData.nombre} onChange={handler}/>
+                                <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre} />
                             </div>   
-                            <div className="col-lg-4 col-md-12 col-sm-12 ">
-                                <Button className="m-1 p-2 btn-danger w-100 " id="btnLimpiar" onClick={OnbtnLimpiar} >Limpiar</Button>      
-                            </div>                         
-                        </div>                        
 
+                            <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">* Descripción</label>                  
+                                <input type="text" className="form-control" id="descripcion"  placeholder="" value={frmData.descripcion} onChange={handler}/>
+                                <Alert show={apiError.descripcion && apiError.descripcion.length > 0} alert="#F3D8DA" msg={apiError.descripcion} />
+                            </div> 
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">* Cantidad</label>                  
+                                <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler} disabled/>
+                                <Alert show={apiError.cantidad && apiError.cantidad.length > 0} alert="#F3D8DA" msg={apiError.cantidad} />
+                            </div> 
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">* Valor unitario ($)</label>                  
+                                <input type="number" className="form-control text-end" id="valorUnitario"  placeholder="" value={frmData.valorUnitario} onChange={handler}/>
+                                <Alert show={apiError.valorUnitario && apiError.valorUnitario.length > 0} alert="#F3D8DA" msg={apiError.valorUnitario} />
+                            </div>                                  
+            
+                            <label htmlFor="" className="m-2 h5">Información adicional</label>
+                            <hr />
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="estado" className="form-label">Unidad de medida</label>                
+                                <GenericSelect 
+                                        Url="PosUnidadesMedida" 
+                                        ValueField="id"
+                                        ValueText="nombre"
+                                        Value={`${frmData.unidadMedida}`} 
+                                        onSelect={handlerGenSelect} 
+                                        ClassName="form-select" 
+                                        id={`unidadMedida`}
+                                /> 
+                                {/* <Alert show={apiError.unidadMedida && apiError.unidadMedida.length > 0} alert="#F3D8DA" msg={apiError.unidadMedida}/>    */}                 
+                            </div> 
+                            
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Lote</label>                  
+                                <input type="text" className="form-control" id="lote"  placeholder="" value={frmData.lote} onChange={handler}/>
+                            </div>  
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Color</label>                  
+                                <input type="text" className="form-control" id="color"  placeholder="" value={frmData.color} onChange={handler}/>
+                            </div>
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Olor</label>                  
+                                <input type="text" className="form-control" id="olor"  placeholder="" value={frmData.olor} onChange={handler}/>
+                            </div>   
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Textura</label>                  
+                                <input type="text" className="form-control" id="textura"  placeholder="" value={frmData.textura} onChange={handler}/>
+                            </div>   
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Tamaño (cms)</label>                  
+                                <input type="text" className="form-control text-end" id="tamano"  placeholder="" value={frmData.tamano} onChange={handler}/>
+                            </div>   
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Peso (Grms)</label>                  
+                                <input type="number" className="form-control text-end" id="peso"  placeholder="" value={frmData.peso} onChange={handler}/>
+                            </div> 
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="estado" className="form-label">Embalaje</label>                
+                                <GenericSelect 
+                                        Url="PosTipoEmbalaje" 
+                                        ValueField="id"
+                                        ValueText="descripcion"
+                                        Value={`${frmData.embalaje}`} 
+                                        onSelect={handlerGenSelect} 
+                                        ClassName="form-select" 
+                                        id={`embalaje`}
+                                />               
+                            </div> 
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Temperatura (°C)</label>                  
+                                <input type="number" className="form-control text-end" id="temperatura"  placeholder="" value={frmData.temperatura} onChange={handler}/>
+                            </div>
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Stock Mínimo</label>                  
+                                <input type="number" className="form-control text-end" id="stockMinimo"  placeholder="" value={frmData.stockMinimo} onChange={handler}/>
+                            </div> 
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Descuento (%)</label>                  
+                                <input type="number" className="form-control text-end" id="descuento"  placeholder="" value={frmData.descuento} onChange={handler}/>
+                            </div>  
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Impuestos (%)</label>                  
+                                <input type="number" className="form-control text-end" id="impuesto"  placeholder="" value={frmData.impuesto} onChange={handler}/>
+                            </div> 
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="valorIva" className="form-label">Valor Impuesto ($)</label>                  
+                                <input type="number" className="form-control text-end" id="valorIva"  placeholder="" value={frmData.valorIva} onChange={handler} disabled/>
+                            </div> 
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Fecha de creación</label>                  
+                                <input type="date" className="form-control" id="fechaCreacion"  placeholder="" value={frmData.fechaCreacion} onChange={handler}/>
+                            </div> 
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Días de vencimiento</label>                                                                                                                                                                    
+                                <input type="number" className="form-control text-end" id="diasVencimiento"  placeholder="" value={frmData.diasVencimiento} onChange={handler}/>
+                            </div> 
+
+                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                <label htmlFor="nombre" className="form-label">Fecha de Vencimiento</label>                  
+                                <input type="date" className="form-control" id="fechaVencimiento"  placeholder="" value={frmData.fechaVencimiento} onChange={handler} disabled/>
+                            </div>
+
+                            <div className="row d-flex justify-content-center">
+                                <div className="col-lg-4 col-md-12 col-sm-12 ">
+                                    <Button className="m-1 p-2 btn-success w-100" id="btnGuardar" onClick={OnbtnGuardar}  >{btnRef}</Button>   
+                                </div>   
+                                <div className="col-lg-4 col-md-12 col-sm-12 ">
+                                    <Button className="m-1 p-2 btn-danger w-100 " id="btnLimpiar" onClick={OnbtnLimpiar} >Limpiar</Button>      
+                                </div>                         
+                            </div>                        
+                        </div>
                     </form> 
 
                     {/* zona de grilla con listado de las sedes creadas */}
@@ -592,11 +579,18 @@ const InventarioProductos = () => {
                     </div> 
                     {
                     estadosVisibles && 
-                            <div className="ms-2 mt-3 p-2 border rounded table-responsive">     
-                                <div className="col-lg-6 col-md-12 col-sm-12 mb-3 offset-lg-6">
-                                    <label htmlFor="filtro" className="">Filtrar <label style={{fontSize: "10px", fontStyle: "italic"}}>(por código, nombre, descripción, Cmpto)</label></label>           
-                                    <input type="text" className="form-control" id="filtro"  placeholder="" onChange={changeTextFiltro}/>
-                                </div>
+                            <div className=" p-1 border rounded table-responsive">     
+                                <div className="col-lg-6 col-md-12 col-sm-12 offset-6 mb-1 ">
+                                    <div className="d-flex justify-content-end mt-3">
+                                        <Button className="m-1 p-2 btn-secondary w-25" onClick={exportTo} >Exportar a excel</Button>                                             
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="filtro" className="">Filtrar <label style={{fontSize: "10px", fontStyle: "italic"}}>(por código, nombre, descripción, Cmpto)</label></label>           
+                                        <input type="text" ref={fltr} className="form-control" id="filtro"  placeholder="" onChange={changeTextFiltro}/>                                        
+                                    </div> 
+                                </div>                                    
+
                                 <DataTable 
                                     title="Listado de productos"
                                     className="border rounded"
@@ -624,13 +618,10 @@ const InventarioProductos = () => {
                         HandlerdClickNok={null}
                         size="md"
                     />}
-                </div>            
-            </div>
-            <div className='d-flex align-items-center justify-content-center bg-dark'>
-                <span className=' h3 text-white'>@Corys90</span>
-            </div>                        
+                </div>
+            </div>  
+            <FooterBar/>                                 
         </div>
-
     )
 };
 

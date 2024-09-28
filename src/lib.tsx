@@ -1,4 +1,6 @@
 import * as env from './env';
+import * as XLSX from 'xlsx';
+import * as FileSaver from 'file-saver';
 
 export async function httpApiPPPD(endp: string, metodo: string, cabeceras: any, bd: any) {
     try {
@@ -13,7 +15,7 @@ export async function httpApiPPPD(endp: string, metodo: string, cabeceras: any, 
     }
     catch(e){
         console.log(" Error: ", e); 
-        return ({code: 400, message: "Error en la petición api"});
+        return ({statusCode: 400, messages: ["Error en la petición api"], data: []});
     }
 }
 
@@ -34,11 +36,11 @@ export async function httpApiDelete(endp: string, metodo: string) {
             data = await response.json();
         }       
 
-        return ({code: response.status, message: data});
+        return ({statusCode: response.status, messages: data, Data: []});
     }
     catch(e){
         console.log(" Error: ", e); 
-        return ({code: 400, message: "Error en la petición api"});
+        return ({statusCode: 400, messages: ["Error en la petición api"], data: []});
     }
 }
 
@@ -58,7 +60,7 @@ export async function httpApiGet(endp: string) {
     }
     catch(e){
         console.log(" Error: ", e); 
-        return ({StatusCode: 500, Messages: ["Error a la petición API. Contacte al administrador"], Data: []});
+        return ({statusCode: 500, messages: ["Error a la petición API. Contacte al administrador"], data: []});
     }
 }
 
@@ -99,3 +101,15 @@ export const getTipoNameByid = (id: number, lista: []) =>{
 
     return (nm);
 }
+
+export const exportToExcel = (fineName: string, datos: any) => {
+
+    const fileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
+    const fileExtension = ".xlsx";
+    const ws = XLSX.utils.json_to_sheet(datos);
+    const wb = { Sheets: { data: ws }, SheetNames: ["data"] };
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const data = new Blob([excelBuffer], { type: fileType });
+    FileSaver.saveAs(data, fineName + fileExtension);
+}
+

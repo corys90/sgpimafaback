@@ -3,6 +3,7 @@
 
 interface FormData {
     id?                 : number;   
+    idPos?              : number;   
     idCodigo?           : number;
     tipoProducto?       : number;
     idProductoCompuesto : number;
@@ -22,12 +23,12 @@ interface FormData {
     stockMinimo         : number;
     descuento           : number;
     impuesto            : number;
-    valorImp            : number;
+    valorIva            : number;
     fechaCreacion       : string;
     diasVencimiento     : number;
     fechaVencimiento    : string;
     createdAt?          : string;    
-    updateAt?           : string;      
+    updatedAt?           : string;      
     nmPos               : string;
     nmPrdCmp            : string;     
 }
