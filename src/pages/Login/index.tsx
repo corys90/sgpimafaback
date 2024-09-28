@@ -14,7 +14,7 @@ import * as env from '../../env';
 const PageLogin = () => {
 
     const dispatch = useDispatch();
-    let [formData, setFormData] = useState({username:env.REACT_APP_API_URL_PROD , password:"prueba", valid: "login"});
+    let [formData, setFormData] = useState({user:"imafasas", pass:"prueba", valid: "login"});
     const navigate = useNavigate();
     const [msgDlgShow, setMsgDlgShow] = useState(false);
     const [msgAlrtUsr, setMsgAlrtUsr] = useState(false);
