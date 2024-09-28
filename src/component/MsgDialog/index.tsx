@@ -19,7 +19,7 @@ const MsgDialog = (props: {Show: boolean, Title: string, Icon: boolean, Message:
     
  return (
       <div>
-        <Modal show={props.Show} centered={true} size={`${props.size}`} animation={true}>
+        <Modal show={props.Show} centered={true} size={`${props.size}`} >
             <Modal.Header  className={`bg-${icn}`}  >
                 <Modal.Title className='h3 text-center text-light'>
                     {                        
@@ -28,12 +28,12 @@ const MsgDialog = (props: {Show: boolean, Title: string, Icon: boolean, Message:
                 </Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <div className='d-flex flex-row gap-3 justify-content-center align-middle'>
+                <div className='d-flex flex-row gap-3 align-middle' >
                     <div >
                         <Icono tipo={props.Icon}/>
                     </div>
                     <div className='d-flex align-items-center '>
-                        <span className=' h6'>
+                        <span>
                             <ul>
                                 {
                                     props.Message.map((msg: string, idx: number )=> <li key={idx}>{msg}</li>)

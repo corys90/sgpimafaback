@@ -8,13 +8,13 @@ import { useDispatch } from "react-redux";
 import { useState } from "react";
 import MsgDialog from "../../component/MsgDialog";
 import MsgModalSpinner from "../../component/MsgModalSpinner";
-import { httpApiPPPD } from "../../lib";
 import { SetEntornoEmp } from '../../redux/store/Actions';
+import * as env from '../../env';
 
 const PageLogin = () => {
 
     const dispatch = useDispatch();
-    let [formData, setFormData] = useState({user:"Prueba", pass:"prueba", valid: "login"});
+    let [formData, setFormData] = useState({username:env.REACT_APP_API_URL_PROD , password:"prueba", valid: "login"});
     const navigate = useNavigate();
     const [msgDlgShow, setMsgDlgShow] = useState(false);
     const [msgAlrtUsr, setMsgAlrtUsr] = useState(false);
@@ -34,7 +34,6 @@ const PageLogin = () => {
             sendForm(evnt);
         }      
     }       
-
 
     const sendForm = async(e: any) =>{
 

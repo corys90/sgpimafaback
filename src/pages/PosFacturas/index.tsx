@@ -631,7 +631,6 @@ const PosFacturas = () => {
 
         const getTipoIdPos = async ()=>{
             const response = await httpApiGet("SedePos");
-            //console.log("tipoIdPos: ", response);
             if (response.statusCode >= 400){
                 setOperacion(false);
                 mensajeModal = [...response.messages];
@@ -646,8 +645,7 @@ const PosFacturas = () => {
         }
   
         const getTipoDocumentos = async ()=>{
-            const response = await httpApiGet("PosTipoIdCliente");
-            //console.log("getTipoDocumentos: ", response);            
+            const response = await httpApiGet("PosTipoIdCliente");           
             if (response.statusCode >= 400){
                 setOperacion(false);
                 mensajeModal = [...response.messages];
@@ -663,7 +661,6 @@ const PosFacturas = () => {
 
         const getListaVendedores = async ()=>{
             const response = await httpApiGet("PosVendedor");
-            //console.log("getListaVendedores: ", response);
             if (response.statusCode >= 400){
                 setOperacion(false);
                 mensajeModal = [...response.messages];

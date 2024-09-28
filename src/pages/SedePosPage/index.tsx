@@ -21,14 +21,14 @@ const customStyles = {
     header: {
         style: {
             color: "#2A3482",
-            fontSize: "22px",
+            fontSize: "20px",
         },
     },
     headRow:{
         style: {
             color: "#2A3482",
             background:"#F5F5F5",
-            fontSize: "18px",
+            fontSize: "14px",
         },
     },
 }; 
