@@ -14,7 +14,7 @@ import * as env from '../../env';
 const PageLogin = () => {
 
     const dispatch = useDispatch();
-    let [formData, setFormData] = useState({user:"", pass:"", valid: "login"});
+    let [formData, setFormData] = useState({us:"", pw:"", valid: "login"});
     const navigate = useNavigate();
     const [msgDlgShow, setMsgDlgShow] = useState(false);
     const [msgAlrtUsr, setMsgAlrtUsr] = useState(false);
