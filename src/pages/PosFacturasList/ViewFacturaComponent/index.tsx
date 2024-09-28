@@ -586,7 +586,7 @@ const ViewFacturaComponent = (props:{ Factura: number}) => {
 
         const getTipoIdPos = async ()=>{
             const response = await httpApiGet("SedePos");
-            //console.log("tipoIdPos: ", response);
+
             if (response.statusCode >= 400){
                 setOperacion(false);
                 mensajeModal = [...response.messages];
@@ -601,8 +601,7 @@ const ViewFacturaComponent = (props:{ Factura: number}) => {
         }
   
         const getTipoDocumentos = async ()=>{
-            const response = await httpApiGet("PosTipoIdCliente");
-            //console.log("getTipoDocumentos: ", response);            
+            const response = await httpApiGet("PosTipoIdCliente");           
             if (response.statusCode >= 400){
                 setOperacion(false);
                 mensajeModal = [...response.messages];

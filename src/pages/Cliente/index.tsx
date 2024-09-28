@@ -243,7 +243,7 @@ const ClientePage = () => {
 
         let msg = ""; 
         mensajeModal =  [];
-        console.log(frmData);
+
         if ((frmData.tipoIdCliente === 0)){
             apiError = {
                 ...apiError,            

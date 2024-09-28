@@ -317,8 +317,6 @@ const  PosCajaEstadoPage = () => {
                 sltPos = [...fltr];
                 setSltPos(sltPos);                   
             }
-
-            //console.log("Pos: ", sltPos);
         };
 
         const getCajas = async ()=>{
@@ -333,9 +331,7 @@ const  PosCajaEstadoPage = () => {
                 const fltr: any = response.data.filter(obj => obj.estado !== 1);
                 sltCaja = [...fltr];
                 setSltCaja(sltCaja);                   
-            }
-
-           //console.log("caja: ", sltCaja);            
+            }         
         };        
 
         getPos();
