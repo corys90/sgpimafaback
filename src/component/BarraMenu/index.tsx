@@ -1,5 +1,5 @@
 
-import { FaBarcode, FaBity, FaBorderStyle, FaBox, FaBoxOpen, FaBuffer, FaBuilding, FaCashRegister, FaChartLine, FaCheckDouble,  FaClipboardCheck,  FaClipboardList,  FaCodiepie,  FaCog,  FaDonate,  FaFileInvoiceDollar, FaHouseUser, FaMoneyBillAlt, FaMoneyCheckAlt, FaPortrait, FaPowerOff, FaTools, FaUnsplash, FaUserNinja, FaUserTie, FaUsers, FaVoteYea, FaWpforms} from "react-icons/fa";
+import { FaBarcode, FaBity, FaBorderStyle, FaBox, FaBoxOpen, FaBuffer, FaBuilding, FaCaretSquareLeft, FaCashRegister, FaChartLine, FaCheckDouble,  FaClipboardCheck,  FaClipboardList,  FaCodiepie,  FaCog,  FaDonate,  FaDropbox,  FaFileInvoiceDollar, FaHouseUser, FaMoneyBillAlt, FaMoneyCheckAlt, FaPortrait, FaPowerOff, FaTools, FaUnsplash, FaUserNinja, FaUserTie, FaUsers, FaVoteYea, FaWpforms} from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import './style.css';
 import logoEmp from '../../assets/logoPpal2.png';
@@ -50,7 +50,11 @@ const BarraMenu = () => {
                                 <ul className="dropdown-menu" aria-labelledby="navbarDropdownReferencia">                               
                                     <li><Link className={`dropdown-item `} to="/inventario"   style={{"color": "#2A3482"}}   > <FaBarcode /> De productos</Link></li>   
                                     <li><Link className={`dropdown-item `} to="/posinventario"   style={{"color": "#2A3482"}}   > <FaBox /> De productos x POS</Link></li>  
-                                    <li><Link className={`dropdown-item `} to="/posmovimientoinventario"   style={{"color": "#2A3482"}}   > <FaBoxOpen /> Ingreso inventario</Link></li>                                  
+                                    <li><Link className={`dropdown-item `} to="/posmovimientoinventario"   style={{"color": "#2A3482"}}   > <FaBoxOpen /> Ingreso a inventario</Link></li>  
+                                    <li><Link className={`dropdown-item `} to="/posmovimientoinventarioout"   style={{"color": "#2A3482"}}   > <FaDropbox /> Egreso de inventario</Link></li>                                      
+                                    <li><hr className="dropdown-divider"/></li>   
+                                    {/* <li><Link className={`dropdown-item `} to="/devolucionposplanta"   style={{"color": "#2A3482"}}   > <FaCaretSquareLeft /> Devolución a planta</Link></li>  */}    
+                                    <li><hr className="dropdown-divider"/></li>    
                                     <li><Link className={`dropdown-item `}   style={{"color": "#2A3482"}}   to="/tipoproductopage" ><FaBity /> De tipo producto</Link></li>  
                                     <li><Link className={`dropdown-item `}   style={{"color": "#2A3482"}}   to="/tipoembalajepage" ><FaCodiepie /> De embalajes</Link></li>     
                                     <li><Link className={`dropdown-item `}   style={{"color": "#2A3482"}}   to="/unidadespage" ><FaBuffer /> De unidades</Link></li> 

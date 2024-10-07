@@ -21,6 +21,8 @@ import PosCajaPagoFacturaPage from "./pages/PosCajaPagoFacturaPage";
 import PosFacturasList from "./pages/PosFacturasList";
 import InventarioProductos from "./pages/InventarioProductos";
 import PosMovimientoInventario from "./pages/PosMovimientoInventario";
+import DevolucionPOSPlanta from "./pages/DevolucionPOSPlanta";
+import PosMovimientoInventarioOut from "./pages/PosMovimientoInventarioOut";
 
 function App() {
 
@@ -28,7 +30,9 @@ function App() {
     <>
       <BrowserRouter>      
         <Routes>
-          <Route path="/posmovimientoinventario" element={<PosMovimientoInventario />}/>              
+          <Route path="/posmovimientoinventarioout" element={<PosMovimientoInventarioOut />}/>      
+          <Route path="/devolucionposplanta" element={<DevolucionPOSPlanta />}/>            
+          <Route path="/posmovimientoinventario" element={<PosMovimientoInventario />}/>                     
           <Route path="/posfacturacionlist" element={<PosFacturasList />}/>             
           <Route path="/pospagofacturacionpage" element={<PosCajaPagoFacturaPage />}/>              
           <Route path="/posfacturacion" element={<PosFacturas />}/>            
