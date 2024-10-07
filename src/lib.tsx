@@ -113,3 +113,9 @@ export const exportToExcel = (fineName: string, datos: any) => {
     FileSaver.saveAs(data, fineName + fileExtension);
 }
 
+
+export const init = async ()=>{
+    const response = await httpApiGet("UtiliatriesApi");
+    return(response);
+}
+

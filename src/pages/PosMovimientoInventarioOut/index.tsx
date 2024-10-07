@@ -54,9 +54,8 @@ const form: FormData = {
     idPos           : 0,
     idCodigo        : 0, 
     cantidad        : 0,
-    lote            : "",
     fechaMovimiento : "",
-    fechaVencimiento: "",    
+    motivo          : 0,    
     updatedAt       : "",
     createdAt       : "",
     user            : ""
@@ -64,32 +63,35 @@ const form: FormData = {
 
 const ApiErrMsg: ApiErrorMessage = {
     idPos       : [],
-    idCodigo    : []    
+    idCodigo    : [],  
+    cantidad    : [],
+    motivo      : []      
 };
 
 const prdInit = {
     nombre: "", 
     descripcion:"", 
-    stock: 0, um: "", 
+    stock: 0, 
     fechaVencimiento: getFechaYhora()
 };
 
-const PosMovimientoInventario= () => {
+const PosMovimientoInventarioOut = () => {
     
     const [estadosVisibles, setEstadosVisibles] = useState(false);
-    const [tituloBoton, setTituloBoton] = useState("Historial ingreso");
-    let [frmData, setFormData] = useState(form);    
+    const [tituloBoton, setTituloBoton] = useState("Historial de egresos");
+    const [frmData, setFormData] = useState({...form});    
     const [pending, setPending] = useState(false); 
     let [apiError, setApiError] = useState(ApiErrMsg); 
     let [data, setData] = useState([]);   
-    let [prd, setPrd] = useState(prdInit);   
+    let [prd, setPrd] = useState({...prdInit});   
     const [showInfo, setShowInfo] = useState(false);    
     const [showToast, setShowToast] = useState(false);    
     const [operacion, setOperacion] = useState(true); 
     let [mensajeModal, setMensajeModal] = useState([]);       
     const [btnRef, setBtnRef] = useState("Guardar");        
     const [findsino, setFindsino] = useState(false);          
-    let [opciones, setOpciones] = useState();          
+    let [opciones, setOpciones] = useState();
+    let [motivos, setMotivos] = useState([]);               
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
@@ -120,7 +122,7 @@ const PosMovimientoInventario= () => {
             selector: (row: FormData) => row.nmPos,
             wrap: true,
             sortable: true,
-            width: "200px"       
+            width: "250px"       
         },         
         {
             name: 'Cantidad',
@@ -128,18 +130,11 @@ const PosMovimientoInventario= () => {
             wrap: true,
             sortable: true,
             right: "true",
-        },       
-        {    name: 'Lote',
-            selector: (row: FormData) => row.lote,
-            wrap: true,
-            sortable: true,
-
-            width: "250px" 
-        },          
+        },              
         {
             name: 'Fecha',
             selector: (row: FormData) => row.fechaMovimiento?.substring(0, 10),
-            grow: 2,
+            grow: 4,
             wrap: true,
             sortable: true,            
         }                           
@@ -165,8 +160,8 @@ const PosMovimientoInventario= () => {
 
     const handlerGenSelect = (opt: {id: string, value: string, text: string}) => {
 
-        frmData.idPos = parseInt(opt.value);
-        setFormData({ ...frmData});
+        const nv = parseInt(opt.value);
+        setFormData({ ...frmData, [opt.id]: nv});
         apiError = {
             ...apiError,
             [opt.id]: [],
@@ -176,7 +171,7 @@ const PosMovimientoInventario= () => {
     } 
 
     const listar = async () =>{
-        const response = await httpApiGet("PosMovimientoInventario/GetAll");
+        const response = await httpApiGet("PosMovimientoInventarioOut/GetAll");
         if (response.statusCode >= 400){
             setOperacion(false);
             mensajeModal = [...response.messages];
@@ -199,24 +194,18 @@ const PosMovimientoInventario= () => {
         if (!estadosVisibles){
             listar();
         }
-        setTituloBoton(!estadosVisibles ? "Ocultar ingresos" : "Mostrar ingresos");
+        setTituloBoton(!estadosVisibles ? "Ocultar egresos" : "Mostrar egresos");
         setEstadosVisibles(!estadosVisibles);
     }
 
     const OnbtnLimpiar = () => {
         
-        // borra las cajas de datos de entrada
-        const inputsArray = Object.entries(frmData);
-        const clearInputsArray = inputsArray.map(([key]) => [key, '']); // Recorremos el arreglo y retornamos un nuevo arreglo de arreglos conservando el key
-        const inputsJson = Object.fromEntries(clearInputsArray); //Convertimos el arreglo de arreglos nuevamente a formato json
-        frmData = {...inputsJson};
-        setFormData(frmData);
         setBtnRef("Guardar");
         setApiError(ApiErrMsg);
-        setPrd({...prdInit});
+        prd = {...prdInit};
+        setPrd(prd);
 
-        frmData.fechaMovimiento = getFechaYhora();
-        setFormData({...frmData});
+        setFormData({...form, fechaMovimiento: getFechaYhora() });
     } 
     
     const OnbtnGuardar = async () => {
@@ -243,10 +232,18 @@ const PosMovimientoInventario= () => {
                 cantidad:["Se requiere un valor válido"],
             }               
         }
+
+        if (frmData.motivo <= 0){
+            apiError = {
+                ...apiError,            
+                motivo:["Se requiere seleccionar un motivo válido"],
+            }               
+        }
         
         if ((apiError.idCodigo && (apiError.idCodigo?.length > 0)) 
             || (apiError.idPos && (apiError.idPos?.length > 0))  
-            || (apiError.cantidad && (apiError.cantidad?.length > 0))){
+            || (apiError.cantidad && (apiError.cantidad?.length > 0))
+            || (apiError.motivo && (apiError.motivo?.length > 0))){
 
             setApiError({...apiError});
         }else{
@@ -260,7 +257,9 @@ const PosMovimientoInventario= () => {
                 setShowInfo(true);    
             }else{
 
-                const response = await httpApiPPPD("PosMovimientoInventario", "POST", {
+                frmData.cantidad = parseFloat(frmData.cantidad);
+                frmData.idCodigo = parseInt(frmData.idCodigo);
+                const response = await httpApiPPPD("PosMovimientoInventarioOut", "POST", {
                     "Content-Type" : "application/json"
                 }, frmData);
 
@@ -268,14 +267,12 @@ const PosMovimientoInventario= () => {
                     mensajeModal = [...response.message];
                     setOperacion(false);
                 }else{
-                    mensajeModal = ["Movimiento registrado con éxito!!!"];
+                    mensajeModal = ["Movimiento de egreso registrado con éxito!!!"];
                     setOperacion(true);
                 }
                 setMensajeModal([...mensajeModal]);
                 setShowInfo(true);
-                prd = {...prdInit};
-                setPrd({...prd});
-                setFormData({...form, idPos: frmData.idPos, fechaMovimiento: frmData.fechaMovimiento});
+                OnbtnLimpiar();
                 listar();                   
             }
         }
@@ -298,10 +295,6 @@ const PosMovimientoInventario= () => {
                 let cant = 0;
                 prd.nombre = response.data[0].nombre;
                 prd.descripcion = response.data[0].descripcion;
-                
-                // trae la unidad de medida
-                let um = opciones.unidadMedida.filter((itm: any)=>itm.id === response.data[0].unidadMedida);
-                prd.um = (um.length > 0) ? um[0].nombre : "Sin definición";
 
                 // trae la cantidad de stock del ineventario del POS
                 const responseInvPos = await httpApiGet(`Posinventarioproducto/Pos/${frmData.idPos}/GetByProductoId/${frmData.idCodigo}`);
@@ -327,8 +320,8 @@ const PosMovimientoInventario= () => {
 
     const inicio = async () =>{
         const res = await init();
-        opciones =  res.data;
-        setOpciones(opciones);
+        motivos = res.data.motivoInventarioStatic;
+        setMotivos([...motivos]);
     }
 
     useEffect(()=>{
@@ -336,7 +329,6 @@ const PosMovimientoInventario= () => {
         inicio();
 
         frmData.fechaMovimiento = getFechaYhora();
-        frmData.fechaVencimiento = getFechaYhora();
         setFormData({...frmData})
 
     }, []); 
@@ -348,7 +340,7 @@ const PosMovimientoInventario= () => {
                 <div className="container border rounded " style={{"color": "#2A3482"}}>
                     <a id="inicio"></a>
                     <div className="d-flex">
-                        <div className="h3 p-2 m-2  text-center text-wrap w-100">Ingreso de inventario</div>                                  
+                        <div className="h3 p-2 m-2  text-center text-wrap w-100">Egreso de inventario</div>                                  
                     </div>
 
                     <form >
@@ -383,14 +375,10 @@ const PosMovimientoInventario= () => {
                                     </div>
                                     <Alert show={apiError.idCodigo && apiError.idCodigo.length > 0} alert="#F3D8DA" msg={apiError.idCodigo} /> 
                                 </div> 
-                                <div className="col-lg-7 col-md-12 col-sm-12 mb-3">
+                                <div className="col-lg-9 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="" className="form-label">Descripción</label>                  
                                     <input type="text" className="form-control " value={`${prd.nombre} - ${prd.descripcion}`} onChange={()=>null} disabled/>                                 
-                                </div>
-                                <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="cantidad" className="form-label">Unidad de medida</label>                  
-                                    <input type="text" className="form-control text-end" id="Umedida"  placeholder="" value={prd.um} disabled />                                                                            
-                                </div>                                 
+                                </div>                             
                                 <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="" className="form-label">Stock</label>                  
                                     <input type="text" className="form-control text-end" value={prd.stock} onChange={()=>null}  disabled/>                                 
@@ -403,14 +391,19 @@ const PosMovimientoInventario= () => {
                                     <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler} /> 
                                     <Alert show={apiError.cantidad && apiError.cantidad.length > 0} alert="#F3D8DA" msg={apiError.cantidad} />                                                                             
                                 </div> 
-                                <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="lote" className="form-label">Lote</label>                  
-                                    <input type="text" className="form-control" id="lote"  placeholder="" value={frmData.lote} onChange={handler} />                                                                              
-                                </div>                                 
-                                <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="fechaVencimiento" className="form-label">Fecha vencimiento</label>                  
-                                    <input type="date" className="form-control text-end" id="fechaVencimiento" value={frmData.fechaVencimiento?.substring(0, 10)}  onChange={handler} />                                 
-                                </div>                               
+                                <div className="col-lg-10 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="lote" className="form-label">* Motivo egreso</label>                  
+                                    <GenericSelect 
+                                        Data={motivos}
+                                        ValueField="id"
+                                        ValueText="label"
+                                        Value={`${frmData.motivo}`} 
+                                        onSelect={handlerGenSelect} 
+                                        ClassName="form-select" 
+                                        id={`motivo`}
+                                    />
+                                    <Alert show={apiError.motivo && apiError.motivo.length > 0} alert="#F3D8DA" msg={apiError.motivo}/>                                                                                                                   
+                                </div>                                                              
                             </div>
 
                             <div className="col-lg-4 col-md-12 col-sm-12 offset-lg-2  my-3">
@@ -441,7 +434,7 @@ const PosMovimientoInventario= () => {
                                     </div>  
 
                                     <DataTable 
-                                        title="Historial de ingresos"
+                                        title="Historial de egresos"
                                         className="border rounded"
                                         columns={columnas}
                                         data={data} 
@@ -458,7 +451,7 @@ const PosMovimientoInventario= () => {
                         )
                     }           
                     { showInfo && <MsgDialog
-                        Title='Ingreso de inventario'
+                        Title='Egresos de inventario'
                         Message={mensajeModal}
                         Icon={operacion}
                         BtnOkName='Aceptar'
@@ -482,4 +475,4 @@ const PosMovimientoInventario= () => {
     )
 };
 
-export default PosMovimientoInventario;
+export default PosMovimientoInventarioOut;

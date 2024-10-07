@@ -3,7 +3,7 @@ import BarraMenu from '../../component/BarraMenu';
 const LandingPage = () => {
 
     return(
-        <>
+        <div  className="container">
             <BarraMenu />         
             <div className='vh-100 border rounded-3 shadow w-100'>
                 <div  className='h-75 bg-body-tertiary'>                
@@ -12,7 +12,7 @@ const LandingPage = () => {
                     <span className=' h3 text-white'>@Corys90</span>
                 </div>                        
             </div>
-        </>
+        </div>
     )
 };
 
