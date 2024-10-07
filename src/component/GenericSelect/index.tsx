@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { httpApiGet } from "../../lib";
 
-const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onSelect: any,
-                              ValueField: string, ValueText: string, id: string}) =>{
+const GenericSelect = (props:{Url?: string, Value: string, ClassName: string, onSelect: any,
+                              ValueField: string, ValueText: string, id: string, Data?: any}) =>{
 
-    const [sltPos, setSltPos] = useState([]);
+    let [sltData, setSltData] = useState([]);
     const [placeholder, setPlaceHolder] = useState("Cargando...");
     const [value, setValue] = useState({id: "", value: props.Value, text: ""});
 
@@ -15,7 +15,7 @@ const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onS
         }else{
             if (response.data.length > 0){
                 setPlaceHolder("Seleccione opción");
-                setSltPos(response.data);                
+                setSltData(response.data);                
             }else{
                 setPlaceHolder("No hay datos...");             
             }  
@@ -33,8 +33,20 @@ const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onS
     }
 
     useEffect(()=>{
-        getApi();
-    }, [props.Value]);
+        if (props.Url){
+            getApi();
+        }
+    }, []);
+
+    useEffect(()=>{
+
+        if (props.Data){
+            sltData = props.Data;
+            setSltData([...sltData]);  
+            setPlaceHolder("Seleccione opción");            
+        }
+        
+    }, [props.Data]);    
 
     return(
         <>
@@ -49,7 +61,7 @@ const GenericSelect = (props:{Url: string, Value: string, ClassName: string, onS
             >
                 <option value="0" >{placeholder} </option>
                 {
-                    sltPos.map((opc: any, idx: number )=> <option key={idx} value={opc[props.ValueField]} >{`${opc[props.ValueText]}`}</option>)
+                    sltData.map((opc: any, idx: number )=> <option key={idx} value={opc[props.ValueField]} >{`${opc[props.ValueText]}`}</option>)
                 }                          
             </select>
         </>
