@@ -4,12 +4,10 @@
 interface FormData {
     id                 : number;
     idCodigo           : number;    
-    nombre             : string;    
-    idPos              : number;
-    nmPos              : string;
     cantidad           : number;
-    motivo             : number;
-    descripcion        : string;     
+    umName             : string;      
+    lote               : string;    
+    fechaVencimiento   : string;
     fechaMovimiento    : string;
     user               : string;    
     createdAt          : string;    

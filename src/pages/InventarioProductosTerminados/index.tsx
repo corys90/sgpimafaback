@@ -1,6 +1,6 @@
 
 import DataTable from "react-data-table-component";
-import { FaEye } from "react-icons/fa";
+import { FaEye, FaSync } from "react-icons/fa";
 import FormData from "../PosInventarioProductos/Dto/FormData";
 import { exportToExcel, getFechaYhora, httpApiGet, responseApi} from "../../lib";
 import BarraMenu from "../../component/BarraMenu";
@@ -8,10 +8,10 @@ import ViewProductModal from "../../component/ViewProductModal";
 import MsgDialog from "../../component/MsgDialog";
 import FooterBar from "../../component/FooterBar";
 import { Button } from "react-bootstrap";
-import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
 import { useSelector } from "react-redux";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as State from  "../../redux/store/InicialState";
+import LoaderSpinner from "../../component/LocalMsgModalSpinner";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -44,35 +44,23 @@ const conditionalRowStyles =[ {
     }
 }];
 
-const loader = ()=> {
-    return (
-        <div className="spinner-border m-3" role="status"  style={{"color": "#2A3482"}}></div>
-    );
-}
-
-const PosInventarioProductos = () => {
+const InventarioProductosTerminados= () => {
        
     const emp:State.data = useSelector((state: any) => state.emp);   
-    const [pending, setPending] = useState(false);  
-    let [idPos, setIdPos] = useState(0);  
+    const [loaders, setLoaders] = useState(false);      
     let [data, setData] = useState([]);   
     let [mensajeModal, setMensajeModal] = useState([]);    
     const [row, setRow] = useState<FormData>();  
     const [showDetail, setShowDetail] = useState(false);    
     const [showInfo, setShowInfo] = useState(false);    
-    const [operacion, setOperacion] = useState(false);    
+    const [operacion] = useState(false);    
     const [cpRecords, setCpRecords] = useState([]);              
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
+
         {
-            name: 'Pos.',
-            selector: (row: FormData) => row.nmPos,
-            sortable: true,
-            width: "110px",   
-        },  
-        {
-            name: 'Producto',
+            name: 'Código',
             selector: (row: FormData) => row.idCodigo,      
             sortable: true,
             cell: (row: FormData) => <div className="w-100 text-end">{row.idCodigo.toLocaleString()}</div>,    
@@ -88,9 +76,9 @@ const PosInventarioProductos = () => {
         {
             name: 'Descripción ',
             selector: (row: FormData) => row.descripcion,
-            width: "300px",
-            wrap: true,
+            width: "350px",
             sortable: true,
+            cell: (row: FormData) => <div className="w-100 ">{row.descripcion}</div>,                
         },               
         {
             name: 'Cantidad',
@@ -120,19 +108,13 @@ const PosInventarioProductos = () => {
             sortable: true,  
             cell: (row: FormData) => <div className="w-100 text-end">{row.descuento.toLocaleString()}</div>,                               
         },          
-        {
-            name: 'Cmpto',
-            selector: (row: FormData) => row.nameCmpto,
-            width: "130px",
-            $right: true, 
-            sortable: true,         
-        },                                    
+                               
         {
             name: 'Acciones',
             selector: (row: FormData) => 
                 <div className='d-flex gap-3 justify-center align-items-center'>
                         <div>
-                            <a href='#' className={`text-success`} title="Edita" onClick={()=>view(row)} >
+                            <a href='#' className={`text-success`} title="Ver detalle" onClick={()=>view(row)} >
                                 <FaEye  style={{width: "20px", height: "20px"}}/>
                             </a>
                         </div> 
@@ -153,8 +135,6 @@ const PosInventarioProductos = () => {
         }else{
             const reg = cpRecords.filter((data: FormData)=> {
                 return    data.idCodigo && data.idCodigo.toString().includes(evnt.target.value)
-                       || data.nmPos && data.nmPos.toUpperCase().includes(evnt.target.value.toUpperCase())
-                       || data.idCodigo && data.idCodigo.toString().includes(evnt.target.value) 
                        || data.nombre && data.nombre.toUpperCase().includes(evnt.target.value.toUpperCase())  
                        || data.descripcion && data.descripcion.toUpperCase().includes(evnt.target.value.toUpperCase()); 
             }); 
@@ -165,30 +145,26 @@ const PosInventarioProductos = () => {
 
     const handleClose = () => setShowDetail(false);
     
-    const listar = async (pos: number, numPOS: number) =>{
+    const exportTo = () => {
 
-        let response: responseApi;
+        exportToExcel(`InventarioXPos-${getFechaYhora()}.xls`, data);
 
-        // Valida si la opción es de todos los pos trae todos los pos, si no, trae solo el pos indicado en variuable pos
-        if (pos === numPOS){
-            response = await httpApiGet(`Posinventarioproducto`);
-        }else{
-            response = await httpApiGet(`Posinventarioproducto/getProductosByPos/${pos}`);            
-        }
+    }
+
+    const listar = async () =>{
+
+        setLoaders(true);
+
+        const response: responseApi = await httpApiGet(`InventarioProductosTerminados`);
 
         if (response.statusCode >= 400){
             mensajeModal = [...response.messages];
-            setMensajeModal(mensajeModal);            
+            setMensajeModal(mensajeModal);     
+            setShowInfo(true);
         }else{          
             const dta: any = [];
             response.data.map((prd: any) => {
-                const item: any = emp.tipologia.tipoPrdCompuesto.find((itm: any) => (itm.id === prd.idProductoCompuesto));
-                const posnm: any = emp.tipologia.sedes.find((itm: any) => (itm.id === prd.idPos));
-                const obj = {
-                    ...prd,
-                    nmPos: posnm && posnm.nombre,
-                    nameCmpto: item && item.nombre
-                };                
+                const obj = {...prd};                
                 dta.push(obj);
             });
 
@@ -196,25 +172,15 @@ const PosInventarioProductos = () => {
             setData(data);  
             setCpRecords([...data]);  
         }
+
+        setLoaders(false);        
     };
 
-    const handler = (e: any, MaxLeng: number) => {
+    useEffect(()=>{
 
-        idPos = parseInt(e.value);
-        setIdPos(idPos);
-        if (idPos === 0){
-            data = [];
-            setData([...data]);
-        }else{
-            listar(idPos, MaxLeng);           
-        }
-    }
+        listar();
 
-    const exportTo = () => {
-
-        exportToExcel(`InventarioXPos-${getFechaYhora()}.xls`, data);
-
-    }
+    }, []);
 
     return(
         <div className="container" >
@@ -223,47 +189,37 @@ const PosInventarioProductos = () => {
                 <div className='container border rounded' style={{"color": "#2A3482"}}>
                     <div className="border p-1 rounded" style={{color: "#2A3482"}} >
                         <a id="inicio"></a>
-                        <div className="h3 p-2 m-2 text-center">Listado de inventario de productos por P.O.S.</div>
+                        <div className="h3 p-2 m-2 text-center">Inventario de productos terminados</div>
                         <div className="ms-2 mt-3 p-2 border rounded">    
-                        <div className="row">
-                            <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
-                                <label htmlFor="pos" className="">Mostrar</label> 
-                                <GenericSelectPersonalized 
-                                        Data={emp && emp.tipologia.sedes} 
-                                        ValueField="id"
-                                        ValueText="nombre"
-                                        Value={`${idPos}`} 
-                                        onSelect={handler} 
-                                        ClassName="form-select" 
-                                        id={`idPos`}
-                                        all="Todos los P.O.S."
-                                    />           
-                            </div>
-                            <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
-                                <label htmlFor="filtro" className="">Filtrar <label style={{fontSize: "10px", fontStyle: "italic"}}>(por POS, código, nombre, descripción)</label></label>           
-                                <input type="text" className="form-control" id="filtro"  placeholder="" onChange={changeTextFiltro}/>
-                            </div>                        
-                        </div> 
-                        <div className="col-lg-12 col-md-12 col-sm-12  mb-1 ">
-                            <div className="mt-3 offset-lg-10 offset-md-10 w-100">
-                                <Button className="m-1 p-2 btn-secondary " onClick={exportTo} >Exportar a excel</Button>                                             
-                            </div>
-                        </div> 
-                        <DataTable 
-                            title="Listado de productos"
-                            className="border rounded"
-                            columns={columnas}
-                            data={data} 
-                            pagination
-                            highlightOnHover
-                            fixedHeader={true}
-                            paginationComponentOptions={pagOptions}    
-                            customStyles={customStyles}
-                            conditionalRowStyles={conditionalRowStyles} 
-                            progressPending={pending}
-                            progressComponent={loader()}             
-                        />
-
+                            <div className="row">
+                                <div className="col-lg-8 col-md-12 col-sm-12 mb-1">
+                                    <label htmlFor="filtro" className="">Filtrar <label style={{fontSize: "10px", fontStyle: "italic"}}>(por Código, nombre, descripción)</label></label>           
+                                    <input type="text" className="form-control" id="filtro"  placeholder="" onChange={changeTextFiltro}/>
+                                </div>   
+                                <div className="col-lg-4 col-md-12 col-sm-12 mb-1 text-end">
+                                    <Button className="m-1 p-2 btn-secondary" onClick={exportTo} >Exportar a excel</Button>                                             
+                                </div>                                                  
+                            </div> 
+                            <div className="row ">
+                                <div className="col-lg-6 col-md-12 col-sm-12 mb-1">
+                                    <label htmlFor="filtro" className=""></label>           
+                                </div>                                   
+                                <div className="col-lg-6 col-md-12 col-sm-12 mb-1 text-end">
+                                    <Button className="m-1 p-2 btn-success" onClick={listar} ><FaSync className="mx-2"/>  Actualizar</Button>                                             
+                                </div>                                                  
+                            </div>                             
+                            <DataTable 
+                                title="Listado de productos"
+                                className="border rounded"
+                                columns={columnas}
+                                data={data} 
+                                pagination
+                                highlightOnHover
+                                fixedHeader={true}
+                                paginationComponentOptions={pagOptions}    
+                                customStyles={customStyles}
+                                conditionalRowStyles={conditionalRowStyles}     
+                            />
                         </div>
                     </div>                 
                 </div>            
@@ -271,7 +227,7 @@ const PosInventarioProductos = () => {
             <FooterBar/>     
             {showDetail && <ViewProductModal Data={row} Show={showDetail} onClose={handleClose}/>}                
             { showInfo && <MsgDialog
-                Title='Inventario por POS'
+                Title='Inventario de matererias primas'
                 Message={mensajeModal}
                 Icon={operacion}
                 BtnOkName='Aceptar'
@@ -280,9 +236,10 @@ const PosInventarioProductos = () => {
                 HandlerdClickOk={()=> setShowInfo(false)}
                 HandlerdClickNok={null}
                 size="md"
-            />}            
+            />} 
+            <LoaderSpinner Show={loaders} color={"red"} text={"Cargando, espere..."}/>           
         </div>
     )
 };
 
-export default PosInventarioProductos;
+export default InventarioProductosTerminados;

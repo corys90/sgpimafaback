@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, ButtonGroup, ButtonToolbar, OverlayTrigger, ToggleButton, Tooltip } from "react-bootstrap";
+import { Button, ButtonToolbar, OverlayTrigger, Tooltip } from "react-bootstrap";
 import DataTable from "react-data-table-component";
 import { FaCartPlus, FaRegTrashAlt, FaSearch } from "react-icons/fa";
 import Alert from "../../component/Alert";
 import ApiErrorMessage from "./Dto/ApiErrorMessage";
 import FormData from "./Dto/FormData";
-import logoEmp from '../../assets/logoPpal2.png';
-import { formatDate, httpApiGet, httpApiPPPD } from "../../lib";
+import { formatDate, getFechaYhora, httpApiGet, httpApiPPPD } from "../../lib";
 import FormDetalleFactura from "./Dto/FormDetalleFactura";
 import MsgFacturaDialog from "../../component/MsgFacturaDialog";
 import ModalPago from "../../component/ModalPago";
 import MsgDialog from "../../component/MsgDialog";
 import BarraMenu from "../../component/BarraMenu";
+import FooterBar from "../../component/FooterBar";
+import { useSelector } from "react-redux";
+import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -113,9 +115,10 @@ const apiErrorDetail = {CodigoProducto: [], Cantidad: []};
 
 const PosFacturas = () => {
     
+    const emp:State.data = useSelector((state: any) => state.emp);  
     let [frmData, setFormData] = useState(form);    
     let [frmDetalle, setFormDetalle] = useState(frmDetailType);        
-    const [frmDetalles, setFormDetalles] = useState([]);        
+    let [frmDetalles, setFormDetalles] = useState([]);        
     const [pending, setPending] = useState(false); 
     // eslint-disable-next-line prefer-const
     let [apiError, setApiError] = useState(ApiErrMsg); 
@@ -126,11 +129,7 @@ const PosFacturas = () => {
     let [tipoModal, setTipoModal] = useState(true);   
     let [mensajeModal, setMensajeModal] = useState([]);  
     const [sizeModal, setSizeModal] = useState("lg");           
-    const [btnRef, setBtnRef] = useState("Guardar");      
-    let [sltPos, setSltPos] = useState([]);     
-    let [idFactura, setIdFactura] = useState(""); 
-    let [tipoDoc, setTipoDoc] = useState([]);   
-    let [vendedores, setVendedores] = useState([]);                      
+    let [idFactura, setIdFactura] = useState("");                       
     const [fechaFactura, setFechFactura] = useState(formatDate(new Date()));                 
     const diasVencimiento = useRef(0);
     const [btnSearch, setBtnSearch] = useState(true); 
@@ -140,57 +139,51 @@ const PosFacturas = () => {
     let [existProduct, setExistProduct] = useState(true);  
     let [maxCant, setMaxCant] = useState(0);      
     let [idVnd, setIdVnd] = useState(0);         
-    const [width, setWidth] = useState(window.innerWidth);
-
-    // Obtiene la fecha y hora actual en formato YYYY-MM-DDTHH:MM:SS
-    const hh = (new Date().getHours()) < 10 ? `0${new Date().getHours()}`:`${new Date().getHours()}`;
-    const mm = (new Date().getMinutes()) < 10 ? `0${new Date().getMinutes()}`:`${new Date().getMinutes()}`; 
-    const fechaYhora = `${formatDate(new Date())}T${hh}:${mm}:00`; 
-
+    const [widthh, setWidth] = useState(window.innerWidth);
+   
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [   
         {
             name: '',
             selector: (row: FormData, idx: number) => 
                 <div className='d-flex gap-3 justify-center align-items-center' key={idx}>
-                        <div><a href='#!' className=' text-danger'  title="Borra item" onClick={()=>borraItem(idx)}>
+                        <div key={idx}><a href='#!' className=' text-danger'  title="Borra item" onClick={()=>borraItem(idx)}>
                                 <FaRegTrashAlt style={{width: "20px", height: "20px"}}/>
                             </a>
                         </div>
                 </div>,
-            width: "80px",
+            width: "50px",
             right: "true", 
-            omit: (width > 1657)             
+            //omit: (widthh > 1657)             
         },      
         {
             name: 'Código',
             selector: (row: FormDetalleFactura) => row.CodigoProducto,
-            width: "100px",
             sortable: true,
-            right:"true"
+            cell: (row: FormDetalleFactura, idx: number) => <div key={idx} className="w-100 text-end">{row.CodigoProducto}</div>,    
+            width: "100px",  
         },  
         {
             name: 'Descripción',
             selector: (row: FormDetalleFactura) => row.Descripcion,
-            width: "150px",
-            wrap: true,
             sortable: true,
+            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}  className="w-100 text-wrap">{row.Descripcion}</div>,    
+            width: "300px",  
         }, 
         {
             name: 'Precio ($)',
             selector: (row: FormDetalleFactura) => row.ValUnitario,
-            width: "110px",
-            right: "true",            
-            sortable: true,  
-            format: (row: FormDetalleFactura) => row.ValUnitario.toLocaleString()          
+            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}  className="w-100 text-end">{Number(row.ValUnitario).toFixed(2)}</div>,                            
+            sortable: true,     
+            width: "110px", 
+            format: (row: FormDetalleFactura) => row.ValUnitario.toLocaleString(),                 
         },        
         {
             name: 'Cant.',
-            selector: (row: FormDetalleFactura) => row.Cantidad,
-            width: "100px",
-            right: "true",    
+            selector: (row: FormDetalleFactura) => row.Cantidad,   
             sortable: true,
-            format: (row: FormDetalleFactura) => row.Cantidad.toLocaleString()                  
+            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}  className="w-100 text-end">{Number(row.Cantidad).toFixed(2)}</div>,    
+            width: "90px",               
         },  
         {
             name: 'U.M.',
@@ -200,9 +193,9 @@ const PosFacturas = () => {
             sortable: true,          
         },         
         {
-            name: 'Desc. (%)',
+            name: 'Desc(%)',
             selector: (row: FormDetalleFactura) => row.Descuento,
-            width: "130px",
+            width: "100px",
             right: "true",    
             sortable: true,
             format: (row: FormDetalleFactura) => row.Descuento.toLocaleString(),
@@ -212,32 +205,31 @@ const PosFacturas = () => {
             },                         
         },   
         {
-            name: 'Valor Desc. ($)',
-            selector: (row: FormDetalleFactura) => row.ValUnitarioDescuento,
-            width: "140px",
-            right: "true",    
+            name: 'Desc($)',
+            selector: (row: FormDetalleFactura) => row.ValUnitarioDescuento,  
             sortable: true,
             format: (row: FormDetalleFactura) => row.ValUnitarioDescuento.toLocaleString(),
             style: {
                 backgroundColor: 'rgba(187, 204, 221, 1)',
                 color: 'red'
-            },              
+            }, 
+            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}  className="w-100 text-end">{Number(row.ValUnitarioDescuento).toFixed(2)}</div>,    
+            width: "110px",   
         }, 
         {
-            name: 'Sub Total ($)',
-            selector: (row: FormDetalleFactura) => row.SubTotal,
-            width: "130px",
-            right: "true",    
+            name: 'Sub Total($)',
+            selector: (row: FormDetalleFactura) => row.SubTotal, 
             sortable: true,
-            format: (row: FormDetalleFactura) => row.SubTotal.toLocaleString(),
             style: {
                 backgroundColor: '#8ABD93',
                 color: 'black',
                 fontWeight: 900
-            },             
+            }, 
+            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}   className="w-100 text-end">{Number(row.SubTotal).toFixed(2)}</div>,    
+            width: "130px",   
         },         
         {
-            name: 'IVA (%)',
+            name: 'IVA(%)',
             selector: (row: FormDetalleFactura) => row.Iva,
             width: "100px",
             right: "true",    
@@ -245,7 +237,7 @@ const PosFacturas = () => {
             format: (row: FormDetalleFactura) => row.Iva.toLocaleString()             
         },          
         {
-            name: 'Valor IVA ($)',
+            name: 'Valor IVA($)',
             selector: (row: FormDetalleFactura) => row.ValIva,
             width: "130px",
             right: "true",    
@@ -265,19 +257,19 @@ const PosFacturas = () => {
                 fontWeight: 900
             },                 
         },  
-        {
+/*         {
             name: '',
             selector: (row: FormData, idx: number) => 
                 <div className='d-flex gap-3 justify-center align-items-center'>
-                        <div><a href='#!' className=' text-danger'  title="Borra ítem" onClick={()=>borraItem(idx)}>
+                        <div key={idx}><a href='#!' className=' text-danger'  title="Borra ítem" onClick={()=>borraItem(idx)}>
                                 <FaRegTrashAlt style={{width: "20px", height: "20px"}}/>
                             </a>
                         </div>
                 </div>,
             width: "80px",
             right: "true",  
-            omit: (width <= 1656)                
-        },                                                                               
+            omit: (widthh <= 1656)                
+        },  */                                                                              
     ];
 
     const Mensajes = (tipo: boolean, msjs: any, size: string) => {
@@ -290,6 +282,24 @@ const PosFacturas = () => {
 
     }
     
+    const handlerPersonalizedSelect = (e: any) => {
+
+        const id: string = e.id;
+        const value: string = e.value;
+
+        frmData = {...frmData, [id]: value };
+        setFormData({ ...frmData});
+
+        apiError = {
+            ...apiError,
+            [id]: [],
+        }
+        setApiError({...apiError});
+
+        // valida si tipocliente y nit contienen valores valido para habilitar el botón de busqueda
+        setBtnSearch( !((parseInt(`${frmData.tipoCliente}`) !== 0) && (frmData.nit !== "")) );
+    }
+
     const handler = (e: any) => {
 
         const id: string = e.target.id;
@@ -415,15 +425,16 @@ const PosFacturas = () => {
 
                 setApiError({...apiError});  
             }else{
-                frmData.createdAt = fechaYhora;
-                frmData.updatedAt = fechaYhora;
+                frmData.createdAt = getFechaYhora();
+                frmData.updatedAt = getFechaYhora();
        
                 const fact = {
                     factHeader: {...frmData},
                     lista: frmDetalles
                 };
 
-                const response = await httpApiPPPD(`Posfactura`, "POST", {"Content-Type" : "application/json"}, fact);
+                const response = await httpApiPPPD(`PosFacturacion`, "POST", {"Content-Type" : "application/json"}, fact);
+                //console.log(response);
                 if (response.statusCode >= 400){
                     mensajeModal = ["Se presentó un problema al generar la factura"];
                     Mensajes(false, mensajeModal, "md");
@@ -446,7 +457,8 @@ const PosFacturas = () => {
     }
 
     const buscaCliente = async () =>{
-        const response = await httpApiGet(`Cliente/GetByIdentification/${frmData.tipoCliente}/${frmData.nit}`);
+
+        const response = await httpApiGet(`Clientes/GetByIdentification/${frmData.tipoCliente}/${frmData.nit}`);
 
         if (response.statusCode >= 400){
             mensajeModal = response.statusCode === 404 ? ["Cliente no registrado"]: [];
@@ -483,20 +495,9 @@ const PosFacturas = () => {
 
     }
 
-    const getUnidadMedida = async (umId: number)=>{
-        const response = await httpApiGet(`PosUnidadesMedida/${umId}`);
-        if (response.statusCode >= 400){
-            setOperacion(false);
-            mensajeModal = [...response.messages];
-            setMensajeModal(mensajeModal);            
-            setShowInfo(true);
-        }else{
-            return response.data[0].nombre;                
-        }
-    }  
-
     const buscaProducto = async () =>{
-        const response = await httpApiGet(`Posinventarioproducto/getProducto/${frmDetalle.CodigoProducto}`);
+        const response = await httpApiGet(`Posinventarioproducto/Pos/${frmData.idPos}/GetByProductoId/${frmDetalle.CodigoProducto}`);
+        console.log(response)
         if (response.statusCode >= 400){
             existProduct = true;
             mensajeModal = response.statusCode === 404 ? ["Producto no registrado"]: [];
@@ -515,10 +516,12 @@ const PosFacturas = () => {
             frmDetalle.Descuento = response.data[0].descuento;  
             maxCant =  response.data[0].cantidad; 
             frmDetalle.UnidadMedida = response.data[0].unidadMedida;
-            frmDetalle.UnidadMedidaName = await getUnidadMedida(response.data[0].unidadMedida);              
+            const um = emp.tipologia.unidadMedida.find((item: any) => item.id === response.data[0].unidadMedida);  
+            frmDetalle.UnidadMedidaName = um ? um.nombre : "";     
             setMaxCant(maxCant);
             setFormDetalle({...frmDetalle});                   
             existProduct = false;
+            console.log(um);
         }
         
         setExistProduct(existProduct);       
@@ -541,7 +544,8 @@ const PosFacturas = () => {
         return(
             <div>
                 <input type="radio" id={`vnd-${props.idVendedor}`} name={`vnd-vendedores`} className=" btn-check" 
-                    autoComplete="off" onChange={props.onClickCallback} checked={props.idVendedor === idVnd}                    />
+                    autoComplete="off" onChange={props.onClickCallback} checked={props.idVendedor === idVnd}                    
+                />
                 <label className="text-wrap btn btn-outline-primary border rounded shadow text-center p-2 m-1 d-flex flex-column justify-content-center"  htmlFor={`vnd-${props.idVendedor}`}  style={{width:"150px", height:"130px"}}>
                     <div className="d-flex flex-column align-items-center " >
                         <div className="h1 fw-bold " >
@@ -604,8 +608,8 @@ const PosFacturas = () => {
             frmDetalle.SubTotal = (valorcompra - frmDetalle.ValUnitarioDescuento);              
             frmDetalle.ValIva = frmDetalle.SubTotal * (frmDetalle.Iva/100);
             frmDetalle.Total = ( frmDetalle.SubTotal + frmDetalle.ValIva);      
-            frmDetalle.createdAt = fechaYhora;
-            frmDetalle.updatedAt = fechaYhora;                  
+            frmDetalle.createdAt = getFechaYhora();
+            frmDetalle.updatedAt = getFechaYhora();                  
             frmDetalles.push({...frmDetalle});
             setFormDetalles([...frmDetalles]);
 
@@ -629,428 +633,352 @@ const PosFacturas = () => {
 
     useEffect(()=>{
 
-        const getTipoIdPos = async ()=>{
-            const response = await httpApiGet("SedePos");
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                mensajeModal = [...response.messages];
-    
-                setMensajeModal(mensajeModal);            
-                setShowInfo(true);
-            }else{
-                const fltr: any = response.data.filter((obj: any) => obj.estado !== 1);
-                sltPos = [...fltr];
-                setSltPos(sltPos);                   
-            }
-        }
-  
-        const getTipoDocumentos = async ()=>{
-            const response = await httpApiGet("PosTipoIdCliente");           
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                mensajeModal = [...response.messages];
-    
-                setMensajeModal(mensajeModal);            
-                setShowInfo(true);
-            }else{
-                const fltr: any = response.data.filter((obj: any) => obj.estado !== 1);
-                tipoDoc = [...fltr];
-                setTipoDoc(tipoDoc);                   
-            }
-        }
+        frmData.fechaFactura = getFechaYhora().substring(0, 10);
+        frmData.fechaVencimiento = frmData.fechaFactura;
+        setFormData({...frmData})
 
-        const getListaVendedores = async ()=>{
-            const response = await httpApiGet("PosVendedor");
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                mensajeModal = [...response.messages];
-    
-                setMensajeModal(mensajeModal);            
-                setShowInfo(true);
-            }else{
-                vendedores = [...response.data];
-                setVendedores(vendedores);                 
-            }
-        } 
-              
         const handleResize = () => {
 
             setWidth(window.innerWidth);
         };
         
-        getTipoIdPos();
-        getTipoDocumentos(); 
-        getListaVendedores();       
-
-        handlerDiasVencimiento();
-
-        frmData.concepto = "Venta de productos";
-        setFormData({...frmData});
-
         window.addEventListener('resize', handleResize);
 
         return () => {
             window.removeEventListener('resize', handleResize);
         };
 
-    }, []) 
+    }, []);
+
+    //console.log(emp);
 
     return(
-        <>
-            <div className=' vh-100 ms-5 me-5 border rounded-3 shadow'>
-                <BarraMenu /> 
-                <div  className=' d-flex justify-content-evenly align-items-center bg-body-tertiary'>
-                    <div className="row">
-                        <div className="col-lg-12 col-md-12  col-sm-12 ">
-                            <div className=" border p-1 rounded" style={{"color": "#2A3482"}}>
-                                <a id="inicio"></a>
-                                <div className=" row p-2">
+        <div className='container '>
+            <BarraMenu /> 
+            <div  className=' border rounded '>
+                <div className="row">
+                    <div className="col-lg-12 col-md-12  col-sm-12 ">
+                        <div className="p-1 " style={{"color": "#2A3482"}}>
+                            <a id="inicio"></a>
 
-                                    <div  className=" col-lg-8 col-md-12 ">
-                                        <div className="col-lg-4 col-md-12 border rounded  w-100">
-                                            <div className="text-center">
-                                            <label className="h3 fw-bold">INTERNATIONAL MARITIME AND FISHERIES AGENCY SAS</label>
-                                            <label className="h4 fw-bold">Nit 901146041</label>                       
-                                            </div>
-                                            <div className="row">
-                                                <div className="col-lg-4 col-md-12 ">
-                                                    <div className="h-100 d-flex align-items-center justify-content-center">
-                                                        <div className="d-flex flex-column w-100">
-                                                            <img src={logoEmp} alt="" className="img-fluid rounded-3 d-flex justify-content-center " />                                 
-                                                        </div>
-                                                    </div>                            
-                                                </div>
-                                                <div className="col-lg-8 col-md-12 ">
-                                                    <div className="h-100 d-flex align-items-center justify-content-center">
-                                                        <div className="d-flex flex-column w-100">
-                                                            <div className="h5 fw-bolder text-center">IVA Régimen Común</div>
-                                                            <div className="h5 fw-bolder text-center">Actividad Económica ICA 0311 4.00 X 1000</div>   
-                                                            <div className="h5  text-center">No somos Grandes Contribuyentes </div>         
-                                                            <div className="h5  text-center">No Somos Agentes de Retención de IVA</div>                                     
-                                                        </div>
-                                                    </div>                                 
-                                                </div>
-                                            </div>
-                                        </div>                    
+                            <div className="row  text-center border rounded  p-2 m-2">
+                                <div className="col-lg-8 col-md-12">
+                                    <label htmlFor="" className="h3 p-2 m-2">Venta de productos</label>
+                                </div>
+                                <div className="col-lg-4 col-md-12">
+                                    <div className="h5 fw-bolder border " style={{backgroundColor: "#85C4FF"}}>Comprobante de venta No.</div>
+                                    <div className="h5 fw-bolder border ">{frmData.idFactura.toString().padStart(7, '0')}</div>                                        
+                                </div>
+                            </div>                    
+
+                            <form className='row border rounded p-2 m-2'>
+
+                                <div className=" h5 p-1 rounded" style={{backgroundColor: "#85C4FF"}}>Datos del cliente (obligatorios)</div>
+                                <hr className="pb-2" />
+
+                                <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="idPos" className="form-label">* Pos</label>                
+                                    <GenericSelectPersonalized 
+                                        Data={emp.tipologia.sedes} 
+                                        ValueField="id"
+                                        ValueText="nombre"
+                                        Value={`${frmData.idPos}`} 
+                                        onSelect={handlerPersonalizedSelect} 
+                                        ClassName="form-select" 
+                                        id={`idPos`}
+                                    />                               
+                                    <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
+                                </div> 
+
+                                <div className="col-lg-9 col-md-12 col-sm-12 mb-3 " style={{backgroundColor: "#F4F6F6"}}>
+                                    <div className="  row d-flex border rounded">
+                                        <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
+                                            <label htmlFor="idPos" className="form-label">* Tipo documento</label>                
+                                            <GenericSelectPersonalized 
+                                                Data={emp.tipologia.tipoIdCliente} 
+                                                ValueField="id"
+                                                ValueText="nombre"
+                                                Value={`${frmData.tipoCliente}`} 
+                                                onSelect={handlerPersonalizedSelect} 
+                                                ClassName="form-select" 
+                                                id={`tipoCliente`}
+                                            />                                             
+                                            <Alert show={apiError.tipoCliente && apiError.tipoCliente.length > 0} alert="#F3D8DA" msg={apiError.tipoCliente}/>                    
+                                        </div> 
+                                        <div className="col-lg-6 col-md-12 col-sm-12">
+                                            <label htmlFor="idCliente" className="form-label">* Identificación</label> 
+                                            <div className="w-100 d-flex ">
+                                                <div className="w-100">
+                                                    <input type="text" className="form-control" id="nit"  placeholder="" value={frmData.nit} onChange={handler}/>                    
+                                                </div>                         
+                                                <div className="">                    
+                                                    <Button className=" btn-secondary " onClick={buscaCliente} disabled={btnSearch} > <FaSearch /></Button>   
+                                                </div>                      
+                                            </div>     
+                                            <Alert show={apiError.nit && apiError.nit.length > 0} alert="#F3D8DA" msg={apiError.nit}/>                    
+                                        </div>                                
                                     </div>
-
-                                    <div  className=" col-lg-4 col-md-12 ">
-                                        <div className=" col-lg-4 col-md-12 text-center border rounded p-4 w-100">
-                                            <p className="h3 fw-bolder border p-2" style={{backgroundColor: "#85C4FF"}}> Factura De Venta No</p>
-                                            <p className="h3 fw-bolder border p-2">{frmData.idFactura.toString().padStart(7, '0')}</p>   
-                                            <p className="h5 text-wrap ">Documento Oficial de Autorización de Numeración Facturación Electrónica No. 18764058091641 que habilita desde IMAF 585 hasta IMAF 1000. Vence 2024-10-17</p>                              
-                                        </div>                    
-                                    </div>
-
                                 </div>
 
-                                <label htmlFor="" className="h3 p-2 m-2">Facturación de productos</label>
-                                <form className='row border rounded p-2 m-2'>
+                                <fieldset className="col-lg-12 col-md-12 col-sm-12 mb-3" disabled={existClient ? true: false} >
+                                    <div className="  row d-flex border rounded">
+                                        
+                                        <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
+                                            <label htmlFor="nombre" className="form-label">* Nombre Cliente</label>                  
+                                            <input type="text" className="form-control" id="razonSocial"  placeholder="" value={frmData.razonSocial} onChange={handler}/>
+                                            <Alert show={apiError.razonSocial && apiError.razonSocial.length > 0} alert="#F3D8DA" msg={apiError.razonSocial} />
+                                        </div>
 
-                                    <div className=" h5 p-1 rounded" style={{backgroundColor: "#85C4FF"}}>Datos del cliente (obligatorios)</div>
-                                    <hr className="pb-2" />
+                                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                            <label htmlFor="nombre" className="form-label">* Departamento</label>                  
+                                            <input type="text" className="form-control" id="dpto"  placeholder="" value={frmData.dpto} onChange={handler}/>
+                                            <Alert show={apiError.dpto && apiError.dpto.length > 0} alert="#F3D8DA" msg={apiError.dpto} />
+                                        </div>   
 
-                                    <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="idPos" className="form-label">* Pos</label>                
-                                        <select className="form-select" aria-label="Default select example" id="idPos" value={frmData.idPos} onChange={handler}  disabled={(btnRef == "Actualizar")}>
-                                            <option value="0" >Seleccione POS</option>
-                                            {
-                                                sltPos.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.nombre}`}</option>)
-                                            }    
-                                        </select>
-                                        <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
-                                    </div> 
+                                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                            <label htmlFor="nombre" className="form-label">* Ciudad</label>                  
+                                            <input type="text" className="form-control" id="ciudad"  placeholder="" value={frmData.ciudad} onChange={handler}/>
+                                            <Alert show={apiError.ciudad && apiError.ciudad.length > 0} alert="#F3D8DA" msg={apiError.ciudad} />
+                                        </div>                         
 
-                                    <div className="col-lg-9 col-md-12 col-sm-12 mb-3 " style={{backgroundColor: "#F4F6F6"}}>
-                                        <div className="  row d-flex border rounded">
-                                            <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
-                                                <label htmlFor="idPos" className="form-label">* Tipo documento</label>                
-                                                <select className="form-select" aria-label="Default select example" id="tipoCliente" value={frmData.tipoCliente} onChange={handler}  disabled={(btnRef == "Actualizar")}>
-                                                    <option value="0" >Tipo Identificación</option>
-                                                    {
-                                                        tipoDoc.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{` ${opc.nombre} - ${opc.descripcion}`}</option>)
-                                                    }    
-                                                </select>
-                                                <Alert show={apiError.tipoCliente && apiError.tipoCliente.length > 0} alert="#F3D8DA" msg={apiError.tipoCliente}/>                    
-                                            </div> 
-                                            <div className="col-lg-6 col-md-12 col-sm-12">
-                                                <label htmlFor="idCliente" className="form-label">* Identificación</label> 
-                                                <div className="w-100 d-flex ">
-                                                    <div className="w-100">
-                                                        <input type="text" className="form-control" id="nit"  placeholder="" value={frmData.nit} onChange={handler}/>                    
-                                                    </div>                         
-                                                    <div className="">                    
-                                                        <Button className=" btn-secondary " onClick={buscaCliente} disabled={btnSearch} > <FaSearch /></Button>   
-                                                    </div>                      
-                                                </div>     
-                                                <Alert show={apiError.nit && apiError.nit.length > 0} alert="#F3D8DA" msg={apiError.nit}/>                    
-                                            </div>                                
+                                        <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
+                                            <label htmlFor="nombre" className="form-label">* Dirección</label>                  
+                                            <input type="text" className="form-control" id="direccion"  placeholder="" value={frmData.direccion} onChange={handler}/>
+                                            <Alert show={apiError.direccion && apiError.direccion.length > 0} alert="#F3D8DA" msg={apiError.direccion} />
+                                        </div>   
+
+                                        <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                            <label htmlFor="nombre" className="form-label">Teléfono</label>                  
+                                            <input type="text" className="form-control" id="telefono"  placeholder="" value={frmData.telefono} onChange={handler}/>
+                                        </div>                                                
+
+                                    </div>
+                                    
+                                </fieldset>                
+
+                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Otros</div>
+                                <hr className="pb-2" />
+
+                                <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="nombre" className="form-label">Por Concepto De</label>                  
+                                    <input type="text" className="form-control " id="concepto"  placeholder="Venta de productos" value={frmData.concepto} disabled />
+                                    {/* <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre} /> */}
+                                </div>       
+                                <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="nombre" className="form-label">Fecha factura</label>                  
+                                    <input type="date" className="form-control" id="fechaFactura"  placeholder="" value={frmData.fechaFactura} disabled />
+                                </div>   
+                                <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="nombre" className="form-label">Días vencimiento</label>                  
+                                    <input type="number" className="form-control text-end" id="diasVencimiento" min={0} defaultValue={0} ref={diasVencimiento} onChange={handlerDiasVencimiento}/>
+                                </div> 
+                                <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="nombre" className="form-label">Fecha vencimiento</label>                  
+                                    <input type="date" className="form-control" id="fechaVencimiento" min={fechaFactura} placeholder="" value={frmData.fechaVencimiento} onChange={handler}/>
+                                    {/* <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre} /> */}
+                                </div> 
+
+                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Vendedores</div>
+                                <hr />
+
+                                <div className="col-lg-12 col-md-12 col-sm-12 mb-3">
+                                    <div className="btn-group d-flex justify-content-center flex-wrap gap-4" role="group" aria-label="Basic radio toggle button group">
+                                        {
+                                            emp.tipologia.vendedores.map((vnd: any, idx: number)=><Vendedor idVendedor={vnd.id} nombres={vnd.nombres} key={idx} onClickCallback={()=>onVendedorSelected(vnd.id)} />)
+                                        }
+                                    </div>
+                                    <Alert show={apiError.idVendedor && apiError.idVendedor.length > 0} alert="#F3D8DA" msg={apiError.idVendedor} />
+                                </div> 
+                            
+                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Producto</div>
+                                <hr />  
+
+                                <div className="col-lg-2 col-md-12 col-sm-12">
+                                    <label htmlFor="idCliente" className="form-label">* Código</label> 
+                                    <div className="w-100 d-flex ">
+                                        <div className="w-100">
+                                            <input type="number" min={0} className="form-control text-end" id="CodigoProducto"  placeholder="" value={frmDetalle.CodigoProducto} onChange={handlerProductoId} />                    
+                                        </div>                         
+                                        <div className="">                    
+                                            <Button className=" btn-secondary " onClick={buscaProducto} disabled={btnSearchDetail} > <FaSearch /></Button>   
+                                        </div>                      
+                                    </div>     
+                                    <Alert show={detralleApiError.CodigoProducto  && detralleApiError.CodigoProducto.length > 0} alert="#F3D8DA" msg={detralleApiError.CodigoProducto  }/>                    
+                                </div> 
+                                <div className="col-lg-5 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="nombre" className="form-label">Descripción</label>                  
+                                    <input type="text" className="form-control" id="Descripcion"  placeholder=""  disabled  value={frmDetalle.Descripcion} onChange={handler}/>
+
+                                </div> 
+                                <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="nombre" className="form-label">Precio</label>                                                                                                                                                                    
+                                    <input type="text" className="form-control text-end" id="ValUnitario"  placeholder=""  disabled  value={frmDetalle.ValUnitario.toLocaleString()} onChange={handler}/>
+
+                                </div> 
+                                <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="nombre" className="form-label">IVA</label>                  
+                                    <input type="text" className="form-control text-end" id="Iva"  placeholder="" disabled  value={frmDetalle.Iva} onChange={handler}/>
+
+                                </div> 
+                                <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="nombre" className="form-label">Descuento</label>                  
+                                    <input type="text" className="form-control text-end" id="Descuento"  placeholder="" disabled  value={frmDetalle.Descuento} onChange={handler}/>
+                                </div> 
+                                <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="nombre" className="form-label">Cant.</label>                                                                                                                                                                    
+                                    <input type="number"  min={0} max={maxCant} className="form-control text-end" id="Cantidad"  
+                                            placeholder="" disabled={existProduct} value={frmDetalle.Cantidad} onChange={handlerProductoId}
+                                    />
+                                    <Alert show={detralleApiError.Cantidad && detralleApiError.Cantidad .length > 0} alert="#F3D8DA" msg={detralleApiError.Cantidad } />
+                                </div> 
+                                <div className="col-lg-1 col-md-12 col-sm-12 ">
+                                    <label htmlFor="" className="form-label"></label>  
+                                    <ButtonToolbar>
+                                        <OverlayTrigger placement="top" overlay={tooltip}>                    
+                                            <Button className="m-1 p-2 btn-success w-100" id="btnAdd" onClick={addProducto}  disabled={btnAddCar || (frmDetalle.Cantidad <= 0)} > <FaCartPlus /> </Button>   
+                                        </OverlayTrigger> 
+                                    </ButtonToolbar>                       
+                                </div>  
+        
+                                {/* zona de detalle del produto */}
+                                <div className=" mt-3 mb-3 p-2 rounded">          
+                                    <DataTable 
+                                        title=""
+                                        className="border rounded"
+                                        columns={columnas}
+                                        data={frmDetalles} 
+                                        pagination
+                                        highlightOnHover
+                                        fixedHeader={true}
+                                        paginationComponentOptions={pagOptions}    
+                                        customStyles={customStyles}
+                                        conditionalRowStyles={conditionalRowStyles} 
+                                        progressPending={pending}
+                                        progressComponent={loader()}             
+                                    />
+                                    <Alert show={frmDetalles.length <= 0} alert="#F3D8DA" msg={["Debe seleccionar los productos a vender"]} />                                 
+                                </div>                                   
+
+                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Resumen total a pagar</div>
+                                <hr /> 
+                                
+                                <div className="col-lg-12 col-md-12 col-sm-12 ">
+                                    <div className="row  ">
+                                        <div className="col-lg-9 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={"SUBTOTAL"} style={{backgroundColor: "#85C4FF"}}/>
+                                        </div>
+                                        <div className="col-lg-3 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.subTotal.toLocaleString()}`} />
                                         </div>
                                     </div>
-
-                                    <fieldset className="col-lg-12 col-md-12 col-sm-12 mb-3" disabled={existClient ? true: false} >
-                                        <div className="  row d-flex border rounded">
-                                            
-                                            <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
-                                                <label htmlFor="nombre" className="form-label">* Nombre Cliente</label>                  
-                                                <input type="text" className="form-control" id="razonSocial"  placeholder="" value={frmData.razonSocial} onChange={handler}/>
-                                                <Alert show={apiError.razonSocial && apiError.razonSocial.length > 0} alert="#F3D8DA" msg={apiError.razonSocial} />
-                                            </div>
-
-                                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                                                <label htmlFor="nombre" className="form-label">* Departamento</label>                  
-                                                <input type="text" className="form-control" id="dpto"  placeholder="" value={frmData.dpto} onChange={handler}/>
-                                                <Alert show={apiError.dpto && apiError.dpto.length > 0} alert="#F3D8DA" msg={apiError.dpto} />
-                                            </div>   
-
-                                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                                                <label htmlFor="nombre" className="form-label">* Ciudad</label>                  
-                                                <input type="text" className="form-control" id="ciudad"  placeholder="" value={frmData.ciudad} onChange={handler}/>
-                                                <Alert show={apiError.ciudad && apiError.ciudad.length > 0} alert="#F3D8DA" msg={apiError.ciudad} />
-                                            </div>                         
-
-                                            <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
-                                                <label htmlFor="nombre" className="form-label">* Dirección</label>                  
-                                                <input type="text" className="form-control" id="direccion"  placeholder="" value={frmData.direccion} onChange={handler}/>
-                                                <Alert show={apiError.direccion && apiError.direccion.length > 0} alert="#F3D8DA" msg={apiError.direccion} />
-                                            </div>   
-
-                                            <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                                                <label htmlFor="nombre" className="form-label">Teléfono</label>                  
-                                                <input type="text" className="form-control" id="telefono"  placeholder="" value={frmData.telefono} onChange={handler}/>
-                                            </div>                                                
-
+                                </div> 
+                                <div className="col-lg-12 col-md-12 col-sm-12 ">
+                                    <div className="row  ">
+                                        <div className="col-lg-9 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={"DESCUENTO"} style={{backgroundColor: "#85C4FF"}}/>
                                         </div>
-                                        
-                                    </fieldset>                
-
-                                    <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Otros</div>
-                                    <hr className="pb-2" />
-
-                                    <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="nombre" className="form-label">Por Concepto De</label>                  
-                                        <input type="text" className="form-control " id="concepto"  placeholder="" value={frmData.concepto} disabled onChange={handler}/>
-                                        {/* <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre} /> */}
-                                    </div>       
-                                    <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="nombre" className="form-label">Fecha factura</label>                  
-                                        <input type="date" className="form-control" id="fechaFactura"  placeholder="" value={frmData.fechaFactura} disabled onChange={handler}/>
-                                        {/* <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre} /> */}
-                                    </div>   
-                                    <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="nombre" className="form-label">Días vencimiento</label>                  
-                                        <input type="number" className="form-control text-end" id="diasVencimiento" min={0} defaultValue={0} ref={diasVencimiento} onChange={handlerDiasVencimiento}/>
-                                    </div> 
-                                    <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="nombre" className="form-label">Fecha vencimiento</label>                  
-                                        <input type="date" className="form-control" id="fechaVencimiento" min={fechaFactura} placeholder="" value={frmData.fechaVencimiento} onChange={handler}/>
-                                        {/* <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre} /> */}
-                                    </div> 
-
-                                    <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Vendedores</div>
-                                    <hr />
-
-                                    <div className="col-lg-12 col-md-12 col-sm-12 mb-3">
-                                        <div className="btn-group d-flex justify-content-center flex-wrap gap-4" role="group" aria-label="Basic radio toggle button group">
-                                            {
-                                                vendedores.map((vnd: any, idx: number)=><Vendedor idVendedor={vnd.id} nombres={vnd.nombres} key={idx} onClickCallback={()=>onVendedorSelected(vnd.id)} />)
-                                            }
+                                        <div className="col-lg-3 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.descuento.toLocaleString()}`} />
                                         </div>
-                                        <Alert show={apiError.idVendedor && apiError.idVendedor.length > 0} alert="#F3D8DA" msg={apiError.idVendedor} />
-                                    </div> 
-                                
-                                    <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Producto</div>
-                                    <hr />  
-
-                                    <div className="col-lg-2 col-md-12 col-sm-12">
-                                        <label htmlFor="idCliente" className="form-label">* Código</label> 
-                                        <div className="w-100 d-flex ">
-                                            <div className="w-100">
-                                                <input type="number" min={0} className="form-control text-end" id="CodigoProducto"  placeholder="" value={frmDetalle.CodigoProducto} onChange={handlerProductoId} />                    
-                                            </div>                         
-                                            <div className="">                    
-                                                <Button className=" btn-secondary " onClick={buscaProducto} disabled={btnSearchDetail} > <FaSearch /></Button>   
-                                            </div>                      
-                                        </div>     
-                                        <Alert show={detralleApiError.CodigoProducto  && detralleApiError.CodigoProducto.length > 0} alert="#F3D8DA" msg={detralleApiError.CodigoProducto  }/>                    
-                                    </div> 
-                                    <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="nombre" className="form-label">Descripción</label>                  
-                                        <input type="text" className="form-control" id="Descripcion"  placeholder=""  disabled  value={frmDetalle.Descripcion} onChange={handler}/>
-
-                                    </div> 
-                                    <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="nombre" className="form-label">Precio</label>                                                                                                                                                                    
-                                        <input type="text" className="form-control text-end" id="ValUnitario"  placeholder=""  disabled  value={frmDetalle.ValUnitario.toLocaleString()} onChange={handler}/>
-
-                                    </div> 
-                                    <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="nombre" className="form-label">IVA</label>                  
-                                        <input type="text" className="form-control text-end" id="Iva"  placeholder="" disabled  value={frmDetalle.Iva} onChange={handler}/>
-
-                                    </div> 
-                                    <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="nombre" className="form-label">Descuento</label>                  
-                                        <input type="text" className="form-control text-end" id="Descuento"  placeholder="" disabled  value={frmDetalle.Descuento} onChange={handler}/>
-                                    </div> 
-                                    <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
-                                        <label htmlFor="nombre" className="form-label">Cantidad (un/gr)</label>                                                                                                                                                                    
-                                        <input type="number"  min={0} max={maxCant} className="form-control text-end" id="Cantidad"  
-                                                placeholder="" disabled={existProduct} value={frmDetalle.Cantidad} onChange={handlerProductoId}
-                                        />
-                                        <Alert show={detralleApiError.Cantidad && detralleApiError.Cantidad .length > 0} alert="#F3D8DA" msg={detralleApiError.Cantidad } />
-                                    </div> 
-                                    <div className="col-lg-1 col-md-12 col-sm-12 ">
-                                        <label htmlFor="" className="form-label"></label>  
-                                        <ButtonToolbar>
-                                            <OverlayTrigger placement="top" overlay={tooltip}>                    
-                                                <Button className="m-1 p-2 btn-success w-100" id="btnAdd" onClick={addProducto}  disabled={btnAddCar || (frmDetalle.Cantidad <= 0)} > <FaCartPlus /> </Button>   
-                                            </OverlayTrigger> 
-                                        </ButtonToolbar>                       
-                                    </div>  
-            
-                                    {/* zona de detalle del produto */}
-                                    <div className=" mt-3 mb-3 p-2 rounded">          
-                                        <DataTable 
-                                            title=""
-                                            className="border rounded"
-                                            columns={columnas}
-                                            data={frmDetalles} 
-                                            pagination
-                                            highlightOnHover
-                                            fixedHeader={true}
-                                            paginationComponentOptions={pagOptions}    
-                                            customStyles={customStyles}
-                                            conditionalRowStyles={conditionalRowStyles} 
-                                            progressPending={pending}
-                                            progressComponent={loader()}             
-                                        />
-                                        <Alert show={frmDetalles.length <= 0} alert="#F3D8DA" msg={["Debe seleccionar los productos a vender"]} />                                 
-                                    </div>                                   
-
-                                    <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Resumen total a pagar</div>
-                                    <hr /> 
-                                    
-                                    <div className="col-lg-12 col-md-12 col-sm-12 ">
-                                        <div className="row  ">
-                                            <div className="col-lg-9 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={"SUBTOTAL"} style={{backgroundColor: "#85C4FF"}}/>
-                                            </div>
-                                            <div className="col-lg-3 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.subTotal.toLocaleString()}`} />
-                                            </div>
+                                    </div>
+                                </div> 
+                                <div className="col-lg-12 col-md-12 col-sm-12 ">
+                                    <div className="row  ">
+                                        <div className="col-lg-9 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={"I.V.A."} style={{backgroundColor: "#85C4FF"}}/>
                                         </div>
-                                    </div> 
-                                    <div className="col-lg-12 col-md-12 col-sm-12 ">
-                                        <div className="row  ">
-                                            <div className="col-lg-9 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={"DESCUENTO"} style={{backgroundColor: "#85C4FF"}}/>
-                                            </div>
-                                            <div className="col-lg-3 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.descuento.toLocaleString()}`} />
-                                            </div>
+                                        <div className="col-lg-3 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.iva.toLocaleString()}`} />
                                         </div>
-                                    </div> 
-                                    <div className="col-lg-12 col-md-12 col-sm-12 ">
-                                        <div className="row  ">
-                                            <div className="col-lg-9 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={"I.V.A."} style={{backgroundColor: "#85C4FF"}}/>
-                                            </div>
-                                            <div className="col-lg-3 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.iva.toLocaleString()}`} />
-                                            </div>
+                                    </div>
+                                </div> 
+                                <div className="col-lg-12 col-md-12 col-sm-12 ">
+                                    <div className="row  ">
+                                        <div className="col-lg-9 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={"TOTAL DE LA OPERACIÓN"} style={{backgroundColor: "#85C4FF"}}/>
                                         </div>
-                                    </div> 
-                                    <div className="col-lg-12 col-md-12 col-sm-12 ">
-                                        <div className="row  ">
-                                            <div className="col-lg-9 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={"TOTAL DE LA OPERACIÓN"} style={{backgroundColor: "#85C4FF"}}/>
-                                            </div>
-                                            <div className="col-lg-3 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.totalOprecaion.toLocaleString()}`} />
-                                            </div>
+                                        <div className="col-lg-3 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.totalOprecaion.toLocaleString()}`} />
                                         </div>
-                                    </div>   
-                                    <div className="col-lg-12 col-md-12 col-sm-12 ">
-                                        <div className="row  ">
-                                            <div className="col-lg-9 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={"RETEFUENTE"} style={{backgroundColor: "#85C4FF"}}/>
-                                            </div>
-                                            <div className="col-lg-3 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.retefuente.toLocaleString()}`} />
-                                            </div>
+                                    </div>
+                                </div>   
+                                <div className="col-lg-12 col-md-12 col-sm-12 ">
+                                    <div className="row  ">
+                                        <div className="col-lg-9 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={"RETEFUENTE"} style={{backgroundColor: "#85C4FF"}}/>
                                         </div>
-                                    </div>                  
-                                    <div className="col-lg-12 col-md-12 col-sm-12 ">
-                                        <div className="row  ">
-                                            <div className="col-lg-9 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={"RETEICA"} style={{backgroundColor: "#85C4FF"}}/>
-                                            </div>
-                                            <div className="col-lg-3 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.reteIca.toLocaleString()}`} />
-                                            </div>
+                                        <div className="col-lg-3 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.retefuente.toLocaleString()}`} />
                                         </div>
-                                    </div> 
-                                    <div className="col-lg-12 col-md-12 col-sm-12 ">
-                                        <div className="row  ">
-                                            <div className="col-lg-9 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={"TOTAL MENOS RETENCIONES"} style={{backgroundColor: "#85C4FF"}}/>
-                                            </div>
-                                            <div className="col-lg-3 col-md-12 text-end border rounded p-1">
-                                                <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.total.toLocaleString()}`} />
-                                            </div>
+                                    </div>
+                                </div>                  
+                                <div className="col-lg-12 col-md-12 col-sm-12 ">
+                                    <div className="row  ">
+                                        <div className="col-lg-9 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={"RETEICA"} style={{backgroundColor: "#85C4FF"}}/>
                                         </div>
-                                    </div>                                               
-                                </form> 
-                                <div className="row d-flex justify-content-center">  
-                                    <div className="col-lg-4 col-md-12 col-sm-12">
-                                        <Button className="m-1 p-2 btn-danger w-100 p-4" id="btnNuevaFactura" onClick={()=>location.reload()} >Nueva facturación</Button>   
-                                    </div>   
-                                    <div className="col-lg-4 col-md-12 col-sm-12">
-                                        <Button className="m-1 p-2 btn-secondary w-100 p-4" id="btnPagar" disabled={(idFactura === "") ? true : false} onClick={()=>setShoPago(true)} >Pagar</Button>   
-                                    </div> 
-                                    <div className="col-lg-4 col-md-12 col-sm-12">
-                                        <Button className="m-1 p-2 btn-success w-100 p-4" id="btnGuardar" disabled={(parseInt(`${frmData.idFactura}`) !== 0)} onClick={OnbtnGuardar} >Generar factura</Button>      
-                                    </div>                         
-                                </div>    
-                                {/*                     */}  
-                                { showMsg && <MsgDialog
-                                    Title='Facturación'
-                                    Message={mensajeModal}
-                                    Icon={false}
-                                    BtnOkName='Aceptar'
-                                    BtnNokName=''
-                                    Show={showMsg}
-                                    HandlerdClickOk={()=> setShowMsg(false)}
-                                    size="md"
-                                    HandlerdClickNok={null}
-                                />}                     
-                                {showInfo && <MsgFacturaDialog
-                                    Title='Facturación'
-                                    Show={showInfo}
-                                    HandlerdClickCerrar={()=> setShowInfo(false)}
-                                    FacturaNro={`${idFactura.toString().padStart(7, '0')}`}
-                                    HandlerdClickImprimir={imprimirFactura}
-                                    size={sizeModal}
-                                /> }   
-                                {showPago && <ModalPago
-                                    Show={showPago}
-                                    HandlerdClickCerrar={()=> {
-                                        setShoPago(false);
-                                        //location.reload();                            
-                                    }}
-                                    Factura={`${frmData.idFactura.toString().padStart(7, '0')}`}
-                                    Pago={`${frmData.total.toString().padStart(7, '0')}`}
-                                /> }                                        
-                            </div>            
-                        </div>
-                    </div>            
-                </div>
-                <div className='d-flex align-items-center justify-content-center '  style={{backgroundColor: "#2A3482"}}>
-                    <span className=' h3 text-white'>@Corys90</span>
-                </div>                        
+                                        <div className="col-lg-3 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.reteIca.toLocaleString()}`} />
+                                        </div>
+                                    </div>
+                                </div> 
+                                <div className="col-lg-12 col-md-12 col-sm-12 ">
+                                    <div className="row  ">
+                                        <div className="col-lg-9 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={"TOTAL MENOS RETENCIONES"} style={{backgroundColor: "#85C4FF"}}/>
+                                        </div>
+                                        <div className="col-lg-3 col-md-12 text-end border rounded p-1">
+                                            <input type="text" className="form-control text-end fw-bold" disabled  value={`$ ${frmData.total.toLocaleString()}`} />
+                                        </div>
+                                    </div>
+                                </div>                                               
+                            </form> 
+                            <div className="row d-flex justify-content-center">  
+                                <div className="col-lg-4 col-md-12 col-sm-12">
+                                    <Button className="m-1 p-2 btn-danger w-100 p-4" id="btnNuevaFactura" onClick={()=>location.reload()} >Nueva venta</Button>   
+                                </div>   
+                                <div className="col-lg-4 col-md-12 col-sm-12">
+                                    <Button className="m-1 p-2 btn-secondary w-100 p-4" id="btnPagar" disabled={(idFactura === "") ? true : false} onClick={()=>setShoPago(true)} >Pagar</Button>   
+                                </div> 
+                                <div className="col-lg-4 col-md-12 col-sm-12">
+                                    <Button className="m-1 p-2 btn-success w-100 p-4" id="btnGuardar" disabled={(frmDetalles.length === 0) || (frmData.idFactura !== 0)} onClick={OnbtnGuardar} >Guardar comprobante de venta</Button>      
+                                </div>                         
+                            </div>    
+                            {/*                     */}  
+                            { showMsg && <MsgDialog
+                                Title='Facturación'
+                                Message={mensajeModal}
+                                Icon={false}
+                                BtnOkName='Aceptar'
+                                BtnNokName=''
+                                Show={showMsg}
+                                HandlerdClickOk={()=> setShowMsg(false)}
+                                size="md"
+                                HandlerdClickNok={null}
+                            />}                     
+                            {showInfo && <MsgFacturaDialog
+                                Title='Facturación'
+                                Show={showInfo}
+                                HandlerdClickCerrar={()=> setShowInfo(false)}
+                                FacturaNro={`${idFactura.toString().padStart(7, '0')}`}
+                                HandlerdClickImprimir={imprimirFactura}
+                                size={sizeModal}
+                            /> }   
+                            {showPago && <ModalPago
+                                Show={showPago}
+                                HandlerdClickCerrar={()=> {
+                                    setShoPago(false);
+                                    location.reload();                            
+                                }}
+                                Factura={`${frmData.idFactura.toString().padStart(7, '0')}`}
+                                Pago={`${frmData.total.toString().padStart(7, '0')}`}
+                            /> }                                        
+                        </div>            
+                    </div>
+                </div>            
             </div>
-        </>
+            <FooterBar/>                             
+        </div>
     )
 };
 

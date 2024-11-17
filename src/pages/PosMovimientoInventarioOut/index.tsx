@@ -6,11 +6,12 @@ import Alert from "../../component/Alert";
 import ApiErrorMessage from "./Dtos/ApiErrorMessage";
 import FormData from "./Dtos/FormData";
 import MsgDialog from "../../component/MsgDialog";
-import { exportToExcel, getFechaYhora, httpApiGet, httpApiPPPD, init } from "../../lib";
+import { exportToExcel, getFechaYhora, httpApiGet, httpApiPPPD } from "../../lib";
 import BarraMenu from "../../component/BarraMenu";
 import FooterBar from "../../component/FooterBar";
 import ToastAutoHide from "../../component/ToastAutoHide";
-import GenericSelect from "../../component/GenericSelect";
+import { useSelector } from "react-redux";
+import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -50,15 +51,18 @@ const loader = ()=> {
 }
 
 const form: FormData = {
-    id              : 0,
-    idPos           : 0,
-    idCodigo        : 0, 
-    cantidad        : 0,
-    fechaMovimiento : "",
-    motivo          : 0,    
-    updatedAt       : "",
-    createdAt       : "",
-    user            : ""
+    id: 0,
+    idPos: 0,
+    idCodigo: 0,
+    cantidad: 0,
+    fechaMovimiento: "",
+    motivo: 0,
+    updatedAt: "",
+    createdAt: "",
+    user: "",
+    nombre: "",
+    nmPos: "",
+    descripcion: ""
 };
 
 const ApiErrMsg: ApiErrorMessage = {
@@ -77,8 +81,9 @@ const prdInit = {
 
 const PosMovimientoInventarioOut = () => {
     
+    const emp:State.data = useSelector((state: any) => state.emp);  
     const [estadosVisibles, setEstadosVisibles] = useState(false);
-    const [tituloBoton, setTituloBoton] = useState("Historial de egresos");
+    const [tituloBoton, setTituloBoton] = useState("Mostrar historial de egresos");
     const [frmData, setFormData] = useState({...form});    
     const [pending, setPending] = useState(false); 
     let [apiError, setApiError] = useState(ApiErrMsg); 
@@ -89,9 +94,8 @@ const PosMovimientoInventarioOut = () => {
     const [operacion, setOperacion] = useState(true); 
     let [mensajeModal, setMensajeModal] = useState([]);       
     const [btnRef, setBtnRef] = useState("Guardar");        
-    const [findsino, setFindsino] = useState(false);          
-    let [opciones, setOpciones] = useState();
-    let [motivos, setMotivos] = useState([]);               
+    const [findsino, setFindsino] = useState(false);     
+    const [alertDesc, setAlertDesc] = useState(false);                   
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
@@ -99,16 +103,16 @@ const PosMovimientoInventarioOut = () => {
             name: 'Nro.',
             selector: (row: FormData) => row.id,
             sortable: true,
-            right: "true",
-            width: "90px"
+            cell: (row: any) => <div className="w-100 text-end">{row.id}</div>,    
+            width: "80px",  
         },  
         {
             name: 'Código',
             selector: (row: FormData) => row.idCodigo,
             wrap: true,
             sortable: true,
-            right: "true",
-            width: "110px"            
+            cell: (row: any) => <div className="w-100 text-end">{row.idCodigo}</div>,    
+            width: "110px",             
         }, 
         {
             name: 'Nombre',
@@ -122,19 +126,26 @@ const PosMovimientoInventarioOut = () => {
             selector: (row: FormData) => row.nmPos,
             wrap: true,
             sortable: true,
-            width: "250px"       
+            width: "200px"       
         },         
         {
             name: 'Cantidad',
             selector: (row: FormData) => row.cantidad,
             wrap: true,
             sortable: true,
-            right: "true",
-        },              
+            cell: (row: any) => <div className="w-100 text-end">{Number(row.cantidad).toFixed(2)}</div>,    
+            width: "110px", 
+        },    
+        {
+            name: 'Motivo',
+            selector: (row: FormData) => row.descripcion,
+            wrap: true,
+            sortable: true,
+            width: "300px"       
+        },                     
         {
             name: 'Fecha',
             selector: (row: FormData) => row.fechaMovimiento?.substring(0, 10),
-            grow: 4,
             wrap: true,
             sortable: true,            
         }                           
@@ -148,8 +159,8 @@ const PosMovimientoInventarioOut = () => {
 
     const handler = (e: any) => {
 
-        const id: string = e.target.id;
-        const value = e.target.value;
+        const id: string = e.id;
+        const value = e.value;
         setFormData({ ...frmData, [id]: value });
         apiError = {
             ...apiError,
@@ -158,16 +169,25 @@ const PosMovimientoInventarioOut = () => {
         setApiError({...apiError});
     }
 
-    const handlerGenSelect = (opt: {id: string, value: string, text: string}) => {
+    const handlertxt = (e: any) => {
 
-        const nv = parseInt(opt.value);
-        setFormData({ ...frmData, [opt.id]: nv});
+        const id: string = e.target.id;
+        const value = e.target.value;
+        setFormData({ ...frmData, [id]: value });
+
         apiError = {
             ...apiError,
-            [opt.id]: [],
+            [id]: [],
         }
+
         setApiError({...apiError});
 
+        if (id === "idCodigo"){
+            prd = {...prdInit};
+            setPrd(prd);
+
+            setAlertDesc(false);
+        }
     } 
 
     const listar = async () =>{
@@ -180,8 +200,14 @@ const PosMovimientoInventarioOut = () => {
         }else{
             const dta: any = [];
             response.data.map((cja: any) => {
-                let obj = {};                
-                obj = {...cja, nmPos: getOption(cja.idPos)};
+                let obj = {}; 
+                const motiv: any = emp.tipologia.motivoInventarioStatic.find((itm: any) => (itm.id === cja.motivo));     
+                const nmp: any = emp.tipologia.sedes.find((itm: any) => (itm.id === cja.idPos));                            
+                obj = {
+                    ...cja, 
+                    nmPos: nmp.nombre,
+                    descripcion: motiv.label
+                };
                 dta.push(obj);
             });
             data = [...dta];
@@ -194,7 +220,7 @@ const PosMovimientoInventarioOut = () => {
         if (!estadosVisibles){
             listar();
         }
-        setTituloBoton(!estadosVisibles ? "Ocultar egresos" : "Mostrar egresos");
+        setTituloBoton(!estadosVisibles ? "Ocultar historial de egresos" : "Mostrar historial de egresos");
         setEstadosVisibles(!estadosVisibles);
     }
 
@@ -202,10 +228,13 @@ const PosMovimientoInventarioOut = () => {
         
         setBtnRef("Guardar");
         setApiError(ApiErrMsg);
+
         prd = {...prdInit};
         setPrd(prd);
 
         setFormData({...form, fechaMovimiento: getFechaYhora() });
+
+        setAlertDesc(false);
     } 
     
     const OnbtnGuardar = async () => {
@@ -239,6 +268,10 @@ const PosMovimientoInventarioOut = () => {
                 motivo:["Se requiere seleccionar un motivo válido"],
             }               
         }
+
+        if (prd.nombre === ""){
+            setAlertDesc(true);               
+        }
         
         if ((apiError.idCodigo && (apiError.idCodigo?.length > 0)) 
             || (apiError.idPos && (apiError.idPos?.length > 0))  
@@ -264,15 +297,15 @@ const PosMovimientoInventarioOut = () => {
                 }, frmData);
 
                 if (response.statusCode >= 400){
-                    mensajeModal = [...response.message];
+                    mensajeModal = [...response.messages];
                     setOperacion(false);
                 }else{
                     mensajeModal = ["Movimiento de egreso registrado con éxito!!!"];
                     setOperacion(true);
+                    OnbtnLimpiar();                    
                 }
                 setMensajeModal([...mensajeModal]);
                 setShowInfo(true);
-                OnbtnLimpiar();
                 listar();                   
             }
         }
@@ -292,6 +325,7 @@ const PosMovimientoInventarioOut = () => {
                 setShowInfo(true);
             }else{      
 
+                setAlertDesc(false);
                 let cant = 0;
                 prd.nombre = response.data[0].nombre;
                 prd.descripcion = response.data[0].descripcion;
@@ -318,15 +352,7 @@ const PosMovimientoInventarioOut = () => {
 
     }     
 
-    const inicio = async () =>{
-        const res = await init();
-        motivos = res.data.motivoInventarioStatic;
-        setMotivos([...motivos]);
-    }
-
     useEffect(()=>{
-
-        inicio();
 
         frmData.fechaMovimiento = getFechaYhora();
         setFormData({...frmData})
@@ -340,7 +366,7 @@ const PosMovimientoInventarioOut = () => {
                 <div className="container border rounded " style={{"color": "#2A3482"}}>
                     <a id="inicio"></a>
                     <div className="d-flex">
-                        <div className="h3 p-2 m-2  text-center text-wrap w-100">Egreso de inventario</div>                                  
+                        <div className="h3 p-2 m-2  text-center text-wrap w-100">Registro de movimientos de egreso de inventario del P.O.S.</div>                                  
                     </div>
 
                     <form >
@@ -348,20 +374,20 @@ const PosMovimientoInventarioOut = () => {
                             <div className="row my-3">
                                 <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="idPos" className="form-label">* Pos</label>                
-                                    <GenericSelect 
-                                        Url="SedePos" 
+                                    <GenericSelectPersonalized 
+                                        Data={emp.tipologia.sedes} 
                                         ValueField="id"
                                         ValueText="nombre"
                                         Value={`${frmData.idPos}`} 
-                                        onSelect={handlerGenSelect} 
+                                        onSelect={handler} 
                                         ClassName="form-select" 
                                         id={`idPos`}
-                                    />  
+                                    />         
                                     <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
                                 </div>   
                                 <div className="col-lg-4 col-md-12 col-sm-12 offset-lg-4 mb-3">
                                     <label htmlFor="fechaMovimiento" className="form-label">Fecha movimiento</label>                  
-                                    <input type="date" className="form-control text-end" id="fechaMovimiento" value={frmData.fechaMovimiento?.substring(0, 10)}  onChange={()=>null}  disabled/>                                 
+                                    <input type="date" className="form-control text-end" id="fechaMovimiento" value={frmData.fechaMovimiento?.substring(0, 10)}  disabled/>                                 
                                 </div>                                                                  
                             </div>
                             <hr />
@@ -370,14 +396,15 @@ const PosMovimientoInventarioOut = () => {
                                 <div className="col-lg-2 col-md-12 col-sm-12 mb-3 ">
                                     <label htmlFor="idCodigo" className="form-label">* Código producto</label>                  
                                     <div className=" d-flex ">
-                                        <input type="number" className="form-control text-end" id="idCodigo" min={0} placeholder="" value={frmData.idCodigo} onChange={handler} /> 
-                                        <Button className="border-0 bg-secondary" onClick={buscaProducto} disabled={(frmData.idPos < 0) && (frmData.idCodigo < 1)}> <FaSearch /> </Button>                                                                              
+                                        <input type="number" className="form-control text-end" id="idCodigo" min={0} placeholder="" value={frmData.idCodigo} onChange={handlertxt} /> 
+                                        <Button className="border-0 bg-secondary" onClick={buscaProducto} disabled={((frmData.idPos < 0) && (frmData.idCodigo < 1)) }> <FaSearch /> </Button>                                                                              
                                     </div>
                                     <Alert show={apiError.idCodigo && apiError.idCodigo.length > 0} alert="#F3D8DA" msg={apiError.idCodigo} /> 
                                 </div> 
                                 <div className="col-lg-9 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="" className="form-label">Descripción</label>                  
-                                    <input type="text" className="form-control " value={`${prd.nombre} - ${prd.descripcion}`} onChange={()=>null} disabled/>                                 
+                                    <input type="text" className="form-control " value={`${prd.nombre} - ${prd.descripcion}`} onChange={()=>null} disabled/>  
+                                    <Alert show={alertDesc} alert="#F3D8DA" msg={["Debe buscar un producto. Escriba el código del producto y luego pulse el botóin buscar para conocer su descripción"]}/>                                  
                                 </div>                             
                                 <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="" className="form-label">Stock</label>                  
@@ -388,21 +415,21 @@ const PosMovimientoInventarioOut = () => {
                             <div className="row  my-3">
                                 <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="cantidad" className="form-label">* Cantidad</label>                  
-                                    <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler} /> 
+                                    <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handlertxt} /> 
                                     <Alert show={apiError.cantidad && apiError.cantidad.length > 0} alert="#F3D8DA" msg={apiError.cantidad} />                                                                             
                                 </div> 
                                 <div className="col-lg-10 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="lote" className="form-label">* Motivo egreso</label>                  
-                                    <GenericSelect 
-                                        Data={motivos}
+                                    <label htmlFor="lote" className="form-label">* Motivo egreso</label>   
+                                    <GenericSelectPersonalized 
+                                        Data={emp.tipologia.motivoInventarioStatic} 
                                         ValueField="id"
                                         ValueText="label"
                                         Value={`${frmData.motivo}`} 
-                                        onSelect={handlerGenSelect} 
+                                        onSelect={handler} 
                                         ClassName="form-select" 
                                         id={`motivo`}
-                                    />
-                                    <Alert show={apiError.motivo && apiError.motivo.length > 0} alert="#F3D8DA" msg={apiError.motivo}/>                                                                                                                   
+                                    /> 
+                                    <Alert show={apiError.motivo.length > 0} alert="#F3D8DA" msg={apiError.motivo}/>                                                                                                                   
                                 </div>                                                              
                             </div>
 
