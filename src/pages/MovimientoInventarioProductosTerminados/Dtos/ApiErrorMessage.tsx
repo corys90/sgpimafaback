@@ -3,10 +3,10 @@
 // de la Api con mensajes de error
 
 interface ApiErrorMessage {
-    idCodigo       : string[];    
-    idPos          : string[];   
-    cantidad       : string[];
-    motivo         : string[];          
+    idCodigo?       : string[];    
+    idPos?          : string[];   
+    cantidad?       : string[];
+    fechaMovimiento?: string[];          
 }
 
 export default ApiErrorMessage;

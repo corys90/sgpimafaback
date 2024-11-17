@@ -1,16 +1,50 @@
 import { useEffect, useState } from 'react';
 import Modal from 'react-bootstrap/Modal';
+import { useSelector } from 'react-redux';
+import FormData from "../../pages/PosInventarioProductos/Dto/FormData";
+import { httpApiGet, tipoligiaData } from '../../lib';
+import * as State from  "../../redux/store/InicialState";
 
-const ViewProductModal = (props: {Data: any, Show: boolean, onClose: any}) => {
+const ViewProductModal = (props: {Data: FormData, Show: boolean, onClose: any}) => {
+
+    const emp:State.data = useSelector((state: any) => state.emp);   
+    const [nmPos, setNmPos] = useState<tipoligiaData>();
+    const [tpNm, setTpnm] = useState<tipoligiaData>();
+    const [tpCmpNm, setTpcmpNm] = useState<tipoligiaData>();
+    const [uMed, setUmed] = useState<tipoligiaData>();  
+    const [emb, setEmb] = useState<tipoligiaData>(); 
+
+    const buscaPrd = async (idprd: number) => {
+
+        const response = await httpApiGet(`inventarioproducto/getProducto/${idprd}`); 
+
+        let item : tipoligiaData = emp.tipologia.sedes.find((elemento: any) => elemento.id === props.Data.idPos);
+        setNmPos(item);
+        item = emp.tipologia.tipoProducto.find((elemento: any) => elemento.id === response.data[0].tipoProducto);
+        setTpnm(item);
+        item = emp.tipologia.tipoPrdCompuesto.find((elemento: any) => elemento.id === response.data[0].idProductoCompuesto);
+        setTpcmpNm(item);   
+        item = emp.tipologia.unidadMedida.find((elemento: any) => elemento.id === response.data[0].unidadMedida);        
+        setUmed(item);      
+        item = emp.tipologia.tipoEmbalaje.find((elemento: any) => elemento.id === response.data[0].embalaje);           
+        setEmb(item);
+
+    }
+
+    useEffect(()=>{
+
+        buscaPrd(props.Data.idCodigo);
+
+    },[]);
 
  return (
       <div>
-        <Modal show={props.Show} centered={true} animation={true} size='xl' onHide={props.onClose}>
-            <Modal.Header className='bg-success ' >
-                <Modal.Title className='h3 text-center text-light w-100'>
+        <Modal show={props.Show} centered={true} animation={true} size='xl' onHide={props.onClose}  style={{"color": "#2A3482"}}>
+            <Modal.Header className=' '   style={{"backgroundColor": "#808aa2", "color": "#2A3482"}}>
+                <Modal.Title className='h3 text-center  w-100'>
                     <div className='d-flex '>
-                        <div className='w-75 d-flex  align-items-center'><h5>Detalle del producto</h5></div>
-                        <div className='w-25 d-flex justify-content-end border-0 '><input type='button' onClick={props.onClose} value={"X"} className='text-white bg-success border-0'/></div>                        
+                        <div className='w-75 d-flex  align-items-center text-light'><h5>Detalle del producto</h5></div>
+                        <div className='w-25 d-flex justify-content-end border-0'><input type='button' onClick={props.onClose} value={"X"} className='border rounded'/></div>                        
                     </div>
                 </Modal.Title>
             </Modal.Header>
@@ -19,24 +53,19 @@ const ViewProductModal = (props: {Data: any, Show: boolean, onClose: any}) => {
                     <label htmlFor="" className="m-2 h5">Datos básicos (obligatorios)</label>
                     <hr className="pb-2" />
 
-                    <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
-                        <label htmlFor="idPos" className="form-label">* Pos</label>                
-                        <input value={`${props.Data.nmPos}`} className="form-control" id={`idPos`} onChange={()=>null}/>
-                    </div>
-
-                    <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                    <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="idCaja" className="form-label">* Código producto</label>                               
                         <input className="form-control text-end" id="idCodigo"  placeholder="" value={props.Data.idCodigo} onChange={()=>null} />                   
                     </div>    
 
-                    <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                    <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="idPos" className="form-label">* Tipo producto</label>                
-                        <input value={props.Data.nmTp} className="form-control" id={`tipoProducto`} onChange={()=>null}/>
+                        <input value={tpNm && tpNm.nombre} className="form-control" id={`tipoProducto`} onChange={()=>null}/>
                     </div>
 
-                    <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                    <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="idPos" className="form-label">* Producto compuesto</label>                
-                        <input value={props.Data.nmPrdCmp} className="form-control" id={`idProductoCompuesto`} onChange={()=>null}/>               
+                        <input value={tpCmpNm && tpCmpNm.nombre} className="form-control" id={`idProductoCompuesto`} onChange={()=>null}/>               
                     </div>  
 
                     <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
@@ -64,7 +93,7 @@ const ViewProductModal = (props: {Data: any, Show: boolean, onClose: any}) => {
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="estado" className="form-label">Unidad de medida</label>                
-                        <input  className="form-control text-end" id="unidadMedida"  placeholder="" value={props.Data.nmUM} onChange={()=>null} />            
+                        <input  className="form-control text-end" id="unidadMedida"  placeholder="" value={uMed && uMed.nombre} onChange={()=>null} />            
                     </div> 
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
@@ -99,7 +128,7 @@ const ViewProductModal = (props: {Data: any, Show: boolean, onClose: any}) => {
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                         <label htmlFor="estado" className="form-label">Embalaje</label>                
-                        <input  className="form-control text-end" id="embalaje"  placeholder="" value={props.Data.nmEmb} onChange={()=>null} />                                      
+                        <input  className="form-control text-end" id="embalaje"  placeholder="" value={emb && emb.nombre} onChange={()=>null} />                                      
                     </div> 
 
                     <div className="col-lg-3 col-md-12 col-sm-12 mb-3">

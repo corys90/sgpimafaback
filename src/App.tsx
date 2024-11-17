@@ -23,6 +23,10 @@ import InventarioProductos from "./pages/InventarioProductos";
 import PosMovimientoInventario from "./pages/PosMovimientoInventario";
 import DevolucionPOSPlanta from "./pages/DevolucionPOSPlanta";
 import PosMovimientoInventarioOut from "./pages/PosMovimientoInventarioOut";
+import MovimientoInventarioProduccion from "./pages/MovimientoInventarioProduccion";
+import InventarioProduccion from "./pages/InventarioProduccion";
+import MovimientoInventarioProductosTerminados from "./pages/MovimientoInventarioProductosTerminados";
+import InventarioProductosTerminados from "./pages/InventarioProductosTerminados";
 
 function App() {
 
@@ -30,6 +34,10 @@ function App() {
     <>
       <BrowserRouter>      
         <Routes>
+          <Route path="/inventarioproductosterminados" element={<InventarioProductosTerminados/>}/>
+          <Route path="/movimientoinventarioproductosterminados" element={<MovimientoInventarioProductosTerminados/>}/>              
+          <Route path="/inventarioproduccion" element={<InventarioProduccion/>}/>    
+          <Route path="/movimientoinventarioproduccion" element={<MovimientoInventarioProduccion/>}/>              
           <Route path="/posmovimientoinventarioout" element={<PosMovimientoInventarioOut />}/>      
           <Route path="/devolucionposplanta" element={<DevolucionPOSPlanta />}/>            
           <Route path="/posmovimientoinventario" element={<PosMovimientoInventario />}/>                     

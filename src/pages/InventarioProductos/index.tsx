@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "react-bootstrap";
 import DataTable from "react-data-table-component";
 import { FaPencilAlt } from "react-icons/fa";
@@ -9,7 +9,9 @@ import MsgDialog from "../../component/MsgDialog";
 import { exportToExcel, getFechaYhora, httpApiGet, httpApiPPPD} from "../../lib";
 import BarraMenu from "../../component/BarraMenu";
 import FooterBar from "../../component/FooterBar";
-import GenericSelect from "../../component/GenericSelect";
+import * as State from  "../../redux/store/InicialState";
+import { useSelector } from "react-redux";
+import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -49,32 +51,36 @@ const loader = ()=> {
 }
 
 const form: FormData = {
-    id                  : 0,
-    idCodigo            : 0,
-    tipoProducto        : 0,
-    idProductoCompuesto : 0,
-    nombre              : "",
-    descripcion         : "",   
-    cantidad            : 0,
-    valorUnitario       : 0,
-    unidadMedida        : 0,
-    lote                : "",
-    color               : "",
-    olor                : "",
-    textura             : "",
-    tamano              : "",
-    peso                : 0,
-    embalaje            : 0,
-    temperatura         : 0,
-    stockMinimo         : 0,
-    descuento           : 0,
-    impuesto            : 0,
-    valorIva            : 0,
-    fechaCreacion       : "",
-    diasVencimiento     : 0,
-    fechaVencimiento    : "",
-    nmPos               : "",
-    nmPrdCmp            : ""
+    id: 0,
+    idCodigo: 0,
+    tipoProducto: 0,
+    idProductoCompuesto: 0,
+    nombre: "",
+    descripcion: "",
+    cantidad: 0,
+    valorUnitario: 0,
+    unidadMedida: 0,
+    lote: "",
+    color: "",
+    olor: "",
+    textura: "",
+    tamano: "",
+    peso: 0,
+    embalaje: 0,
+    temperatura: 0,
+    stockMinimo: 0,
+    descuento: 0,
+    impuesto: 0,
+    valorIva: 0,
+    fechaCreacion: "",
+    diasVencimiento: 0,
+    fechaVencimiento: "",
+    nmPos: "",
+    nmPrdCmp: "",
+    idPos: 0,
+    nameCmpto: "",
+    createdAt: "",
+    updatedAt: ""
 };
 
 const ApiErrMsg: ApiErrorMessage = {
@@ -90,11 +96,11 @@ const ApiErrMsg: ApiErrorMessage = {
 
 const InventarioProductos = () => {
     
+    const emp:State.data = useSelector((state: any) => state.emp);   
     const [estadosVisibles, setEstadosVisibles] = useState(false);
-    const [tituloBoton, setTituloBoton] = useState("Mostrar productos");
+    const [tituloBoton, setTituloBoton] = useState("Mostrar lista de productos");
     let [frmData, setFormData] = useState(form);    
     const [pending, setPending] = useState(false); 
-    // eslint-disable-next-line prefer-const
     let [apiError, setApiError] = useState(ApiErrMsg); 
     let [data, setData] = useState([]);   
     let [cpRecords, setCpRecords] = useState([]);       
@@ -104,14 +110,13 @@ const InventarioProductos = () => {
     const [btnRef, setBtnRef] = useState("Guardar");         
     const fltr = useRef(null);            
 
-    // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
         {
             name: 'Código',
             selector: (row: FormData) => row.idCodigo,
-            width: "110px",        
-            sortable: true,
-            right: true.toString(),                   
+            cell: (row: FormData) => <div className="w-100 text-end">{row.idCodigo.toLocaleString()}</div>,       
+            sortable: true,  
+            width: "100px"          
         }, 
         {
             name: 'Nombre ',
@@ -128,41 +133,38 @@ const InventarioProductos = () => {
             width: "350px",  
         },               
         {
-            name: 'Cant.',
+            name: 'Cantidad',
             selector: (row: FormData) => row.cantidad,
-            sortable: true,  
-            format: (row: FormData) => row.cantidad.toLocaleString(),   
-            right: true.toString(),                   
+            sortable: true,     
+            cell: (row: FormData) => <div className="w-100 text-end">{row.cantidad.toLocaleString()}</div>,  
+            width: "110px"     
         },         
         {
             name: 'Valor ($)',
             selector: (row: FormData) => row.valorUnitario,
             sortable: true,    
-            format: (row: FormData) => row.valorUnitario.toLocaleString(),    
-            right: true.toString(),  
+            cell: (row: FormData) => <div className="w-100 text-end">{row.valorUnitario.toLocaleString()}</div>,  
             width: "110px",                                    
         }, 
         {
             name: 'Imp.(%)',
             selector: (row: FormData) => row.impuesto,  
             sortable: true,    
-            format: (row: FormData) => row.impuesto.toLocaleString(),   
-            right: true.toString(),  
-            grow: 2                                    
+            cell: (row: FormData) => <div className="w-100 text-end">{row.impuesto.toLocaleString()}</div>,    
+            width: "110px",                                            
         },         
         {
             name: 'Dcto (%)',
             selector: (row: FormData) => row.descuento,
             sortable: true,     
-            right: true.toString(), 
-            width: "110px",                          
+            cell: (row: FormData) => <div className="w-100 text-end">{row.descuento.toLocaleString()}</div>,    
+            width: "110px",                           
         },          
         {
             name: 'Cmpto',
             selector: (row: FormData) => row.nmPrdCmp,
             wrap: true,
-            sortable: true,  
-            grow: 3       
+            sortable: true,       
         },                                    
         {
             name: 'Acciones',
@@ -181,14 +183,31 @@ const InventarioProductos = () => {
         },                             
     ];
 
-    const handler = (e: any) => {
-        const id: string = e.target.id;
-        const value = e.target.value;
+    const handler = (e: any,) => {
+
+        const id: string = e.id;
+        const value = e.value;
         setFormData({ ...frmData, [id]: value });
+
         apiError = {
             ...apiError,
             [id]: [],
         }
+
+        setApiError({...apiError});
+    } 
+
+    const handlertxt = (e: any) => {
+
+        const id: string = e.target.id;
+        const value = e.target.value;
+        setFormData({ ...frmData, [id]: value });
+
+        apiError = {
+            ...apiError,
+            [id]: [],
+        }
+
         setApiError({...apiError});
     } 
 
@@ -225,7 +244,7 @@ const InventarioProductos = () => {
         if (!estadosVisibles){
             listar();
         }
-        setTituloBoton(!estadosVisibles ? "Ocultar Novedades" : "Mostrar Novedades");
+        setTituloBoton(!estadosVisibles ? "Ocultar lista de productos" : "Mostrar lista de productos");
         setEstadosVisibles(!estadosVisibles);
     }
 
@@ -239,17 +258,19 @@ const InventarioProductos = () => {
     
     const OnbtnGuardar = async () => {
         
+        console.log(frmData);
+
         let msg = ""; 
         mensajeModal =  [];
 
-        if (frmData.idCodigo && frmData.idCodigo <= 0){
+        if ((frmData.idCodigo) <= 0){
             apiError = {
                 ...apiError,            
-                idCodigo:["Debe digitar un código válido"],
+                idCodigo:["Debe digitar un código de producto válido"],
             }               
         }
 
-        if (frmData.tipoProducto && frmData.tipoProducto <= 0){
+        if ((frmData.tipoProducto) <= 0){
             apiError = {
                 ...apiError,            
                 tipoProducto:["Seleccione un tipo de producto"],
@@ -268,16 +289,9 @@ const InventarioProductos = () => {
                 ...apiError,            
                 nombre:["Debe escribir un nombre para el producto"],
             }               
-        }
-
-        if (frmData.cantidad <= 0){
-            apiError = {
-                ...apiError,            
-                cantidad:["Debe escribir un valor válido"],
-            }               
-        }      
+        }  
           
-        if (frmData.valorUnitario <= 0){
+        if (parseInt("" + frmData.valorUnitario) <= 0){
             apiError = {
                 ...apiError,            
                 valorUnitario:["Debe escribir un valor válido"],
@@ -311,7 +325,7 @@ const InventarioProductos = () => {
                     setOperacion(true);
                     // actualiza la grilla
                     estadosVisibles && await listar();
-                    msg = "Se ha creado la informacioón exitosamente!!!";
+                    msg = "Se ha creado la información exitosamente!!!";
                     mensajeModal.push(msg);
                 }  
             }else{
@@ -340,7 +354,7 @@ const InventarioProductos = () => {
             OnbtnLimpiar();
             setMensajeModal(mensajeModal);            
             setShowInfo(true);
-            estadosVisibles && changeTextFiltro({target:{value: `${fltr.current.value }`}});
+            estadosVisibles && changeTextFiltro({target:{value: `${fltr.current && fltr.current.value }`}});
         }
     }  
 
@@ -366,26 +380,11 @@ const InventarioProductos = () => {
         }
     }
 
-    const handlerGenSelect = (opt: {id: string, value: string, text: string}) => {
-
-        frmData[opt.id] = parseInt(opt.value);
-        setFormData({ ...frmData});
-        apiError = {
-            ...apiError,
-            [opt.id]: [],
-        }
-        setApiError({...apiError});
-
-    } 
-
     const exportTo = () => {
 
         exportToExcel(`InventarioGral-${getFechaYhora()}.xls`, data);
 
     }     
-
-    useEffect(()=>{       
-    }, []); 
 
     return(
         <div className="container">
@@ -393,7 +392,7 @@ const InventarioProductos = () => {
             <div>
                 <div className="container border rounded " style={{"color": "#2A3482"}}>
                     <a id="inicio"></a>
-                    <div className="h3 pt-2 pb-2 text-center text-wrap">Inventario General de Productos</div>
+                    <div className="h3 pt-2 pb-2 text-center text-wrap">Registro de productos de inventario</div>
 
                     <form >
                         <div className='row border '>
@@ -402,59 +401,58 @@ const InventarioProductos = () => {
 
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="idCaja" className="form-label">* Código producto</label>                               
-                                <input type="number" min={0} className="form-control text-end" id="idCodigo"  placeholder="" value={frmData.idCodigo} onChange={handler}  disabled={(btnRef == "Actualizar")}/>
+                                <input type="number" min={0} className="form-control text-end" id="idCodigo"  placeholder="" value={frmData.idCodigo} onChange={handlertxt}  disabled={(btnRef == "Actualizar")}/>
                                 <Alert show={apiError.idCodigo && apiError.idCodigo.length > 0} alert="#F3D8DA" msg={apiError.idCodigo}/>                    
                             </div>    
 
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="tipoProducto" className="form-label">* Tipo producto</label>                
-                                <GenericSelect 
-                                        Url="PosTipoProducto" 
+                                <GenericSelectPersonalized 
+                                        Data={emp && emp.tipologia.tipoProducto} 
                                         ValueField="id"
                                         ValueText="nombre"
                                         Value={`${frmData.tipoProducto}`} 
-                                        onSelect={handlerGenSelect} 
-                                        ClassName="form-select" 
-                                        id={`tipoProducto`}
-                                />                            
+                                        onSelect={handler} 
+                                        ClassName="form-select"
+                                        id="tipoProducto"
+                                />                             
                                 <Alert show={apiError.tipoProducto && apiError.tipoProducto.length > 0} alert="#F3D8DA" msg={apiError.tipoProducto}/>                    
                             </div>
 
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="idProductoCompuesto" className="form-label">* Producto compuesto</label>                
-                                <GenericSelect 
-                                        Url="PosProductoCompuesto" 
+                                <GenericSelectPersonalized 
+                                        Data={emp && emp.tipologia.tipoPrdCompuesto} 
                                         ValueField="id"
                                         ValueText="nombre"
                                         Value={`${frmData.idProductoCompuesto}`} 
-                                        onSelect={handlerGenSelect} 
-                                        ClassName="form-select" 
-                                        id={`idProductoCompuesto`}
-                                />      
+                                        onSelect={handler} 
+                                        ClassName="form-select"
+                                        id="idProductoCompuesto"
+                                />       
                                 <Alert show={apiError.idProductoCompuesto && apiError.idProductoCompuesto.length > 0} alert="#F3D8DA" msg={apiError.idProductoCompuesto}/>                    
                             </div>  
 
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">* Nombre producto</label>                  
-                                <input type="text" className="form-control" id="nombre"  placeholder="" value={frmData.nombre} onChange={handler}/>
+                                <input type="text" className="form-control" id="nombre"  placeholder="" value={frmData.nombre} onChange={handlertxt}/>
                                 <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre} />
                             </div>   
 
                             <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">* Descripción</label>                  
-                                <input type="text" className="form-control" id="descripcion"  placeholder="" value={frmData.descripcion} onChange={handler}/>
+                                <input type="text" className="form-control" id="descripcion"  placeholder="" value={frmData.descripcion} onChange={handlertxt}/>
                                 <Alert show={apiError.descripcion && apiError.descripcion.length > 0} alert="#F3D8DA" msg={apiError.descripcion} />
                             </div> 
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">* Cantidad</label>                  
-                                <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handler} disabled/>
-                                <Alert show={apiError.cantidad && apiError.cantidad.length > 0} alert="#F3D8DA" msg={apiError.cantidad} />
+                                <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handlertxt} disabled/>
                             </div> 
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">* Valor unitario ($)</label>                  
-                                <input type="number" className="form-control text-end" id="valorUnitario"  placeholder="" value={frmData.valorUnitario} onChange={handler}/>
+                                <input type="number" className="form-control text-end" id="valorUnitario"  placeholder="" value={frmData.valorUnitario} onChange={handlertxt}/>
                                 <Alert show={apiError.valorUnitario && apiError.valorUnitario.length > 0} alert="#F3D8DA" msg={apiError.valorUnitario} />
                             </div>                                  
             
@@ -463,99 +461,99 @@ const InventarioProductos = () => {
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="estado" className="form-label">Unidad de medida</label>                
-                                <GenericSelect 
-                                        Url="PosUnidadesMedida" 
+                                <GenericSelectPersonalized 
+                                        Data={emp && emp.tipologia.unidadMedida} 
                                         ValueField="id"
                                         ValueText="nombre"
                                         Value={`${frmData.unidadMedida}`} 
-                                        onSelect={handlerGenSelect} 
+                                        onSelect={handler} 
                                         ClassName="form-select" 
-                                        id={`unidadMedida`}
+                                        id="unidadMedida"
                                 /> 
                                 {/* <Alert show={apiError.unidadMedida && apiError.unidadMedida.length > 0} alert="#F3D8DA" msg={apiError.unidadMedida}/>    */}                 
                             </div> 
                             
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Lote</label>                  
-                                <input type="text" className="form-control" id="lote"  placeholder="" value={frmData.lote} onChange={handler}/>
+                                <input type="text" className="form-control" id="lote"  placeholder="" value={frmData.lote} onChange={handlertxt}/>
                             </div>  
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Color</label>                  
-                                <input type="text" className="form-control" id="color"  placeholder="" value={frmData.color} onChange={handler}/>
+                                <input type="text" className="form-control" id="color"  placeholder="" value={frmData.color} onChange={handlertxt}/>
                             </div>
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Olor</label>                  
-                                <input type="text" className="form-control" id="olor"  placeholder="" value={frmData.olor} onChange={handler}/>
+                                <input type="text" className="form-control" id="olor"  placeholder="" value={frmData.olor} onChange={handlertxt}/>
                             </div>   
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Textura</label>                  
-                                <input type="text" className="form-control" id="textura"  placeholder="" value={frmData.textura} onChange={handler}/>
+                                <input type="text" className="form-control" id="textura"  placeholder="" value={frmData.textura} onChange={handlertxt}/>
                             </div>   
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Tamaño (cms)</label>                  
-                                <input type="text" className="form-control text-end" id="tamano"  placeholder="" value={frmData.tamano} onChange={handler}/>
+                                <input type="text" className="form-control text-end" id="tamano"  placeholder="" value={frmData.tamano} onChange={handlertxt}/>
                             </div>   
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Peso (Grms)</label>                  
-                                <input type="number" className="form-control text-end" id="peso"  placeholder="" value={frmData.peso} onChange={handler}/>
+                                <input type="number" className="form-control text-end" id="peso"  placeholder="" value={frmData.peso} onChange={handlertxt}/>
                             </div> 
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="estado" className="form-label">Embalaje</label>                
-                                <GenericSelect 
-                                        Url="PosTipoEmbalaje" 
+                                <GenericSelectPersonalized 
+                                        Data={emp && emp.tipologia.tipoEmbalaje}
                                         ValueField="id"
-                                        ValueText="descripcion"
+                                        ValueText="nombre"
                                         Value={`${frmData.embalaje}`} 
-                                        onSelect={handlerGenSelect} 
+                                        onSelect={handler} 
                                         ClassName="form-select" 
-                                        id={`embalaje`}
+                                        id="embalaje"
                                 />               
                             </div> 
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Temperatura (°C)</label>                  
-                                <input type="number" className="form-control text-end" id="temperatura"  placeholder="" value={frmData.temperatura} onChange={handler}/>
+                                <input type="number" className="form-control text-end" id="temperatura"  placeholder="" value={frmData.temperatura} onChange={handlertxt}/>
                             </div>
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Stock Mínimo</label>                  
-                                <input type="number" className="form-control text-end" id="stockMinimo"  placeholder="" value={frmData.stockMinimo} onChange={handler}/>
+                                <input type="number" className="form-control text-end" id="stockMinimo"  placeholder="" value={frmData.stockMinimo} onChange={handlertxt}/>
                             </div> 
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Descuento (%)</label>                  
-                                <input type="number" className="form-control text-end" id="descuento"  placeholder="" value={frmData.descuento} onChange={handler}/>
+                                <input type="number" className="form-control text-end" id="descuento"  placeholder="" value={frmData.descuento} onChange={handlertxt}/>
                             </div>  
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Impuestos (%)</label>                  
-                                <input type="number" className="form-control text-end" id="impuesto"  placeholder="" value={frmData.impuesto} onChange={handler}/>
+                                <input type="number" className="form-control text-end" id="impuesto"  placeholder="" value={frmData.impuesto} onChange={handlertxt}/>
                             </div> 
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="valorIva" className="form-label">Valor Impuesto ($)</label>                  
-                                <input type="number" className="form-control text-end" id="valorIva"  placeholder="" value={frmData.valorIva} onChange={handler} disabled/>
+                                <input type="number" className="form-control text-end" id="valorIva"  placeholder="" value={frmData.valorIva} onChange={handlertxt} disabled/>
                             </div> 
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Fecha de creación</label>                  
-                                <input type="date" className="form-control" id="fechaCreacion"  placeholder="" value={frmData.fechaCreacion} onChange={handler}/>
+                                <input type="date" className="form-control" id="fechaCreacion"  placeholder="" value={frmData.fechaCreacion} onChange={handlertxt}/>
                             </div> 
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Días de vencimiento</label>                                                                                                                                                                    
-                                <input type="number" className="form-control text-end" id="diasVencimiento"  placeholder="" value={frmData.diasVencimiento} onChange={handler}/>
+                                <input type="number" className="form-control text-end" id="diasVencimiento"  placeholder="" value={frmData.diasVencimiento} onChange={handlertxt}/>
                             </div> 
 
                             <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="nombre" className="form-label">Fecha de Vencimiento</label>                  
-                                <input type="date" className="form-control" id="fechaVencimiento"  placeholder="" value={frmData.fechaVencimiento} onChange={handler} disabled/>
+                                <input type="date" className="form-control" id="fechaVencimiento"  placeholder="" value={frmData.fechaVencimiento} onChange={handlertxt} disabled/>
                             </div>
 
                             <div className="row d-flex justify-content-center">

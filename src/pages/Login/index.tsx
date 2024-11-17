@@ -9,12 +9,12 @@ import { useState } from "react";
 import MsgDialog from "../../component/MsgDialog";
 import MsgModalSpinner from "../../component/MsgModalSpinner";
 import { SetEntornoEmp } from '../../redux/store/Actions';
-import * as env from '../../env';
+import { init } from "../../lib";
 
 const PageLogin = () => {
 
     const dispatch = useDispatch();
-    let [formData, setFormData] = useState({us:"", pw:"", valid: "login"});
+    let [formData, setFormData] = useState({us:"imafasas", pw:"123", valid: "login"});
     const navigate = useNavigate();
     const [msgDlgShow, setMsgDlgShow] = useState(false);
     const [msgAlrtUsr, setMsgAlrtUsr] = useState(false);
@@ -41,8 +41,8 @@ const PageLogin = () => {
 
         let sw = 0;
         
-        (formData.user === "") ? setMsgAlrtUsr(true) : sw++; 
-        (formData.pass === "") ? setMsgAlrtPwd(true) : sw++; 
+        (formData.us === "") ? setMsgAlrtUsr(true) : sw++; 
+        (formData.pw === "") ? setMsgAlrtPwd(true) : sw++; 
 
         if (sw === 2){
 
@@ -65,10 +65,28 @@ const PageLogin = () => {
                 last_name: dta.payload.user.last_name, profile: dta.payload.user.profile, 
                 token:  dta.payload.token, user: formData.user,
             })); */
-            dispatch(SetEntornoEmp({first_name: "Usuario ", id_user: "0",
+
+            let tpl = [];
+            const resp = await init();
+            if (resp.statusCode <= 200){
+                tpl = resp.data;
+            }
+
+            dispatch(SetEntornoEmp({
+                first_name: "Usuario ", id_user: "0",
                 last_name: "pruebas", profile: "a.b.c.d.e", 
-                token:  "jwtOken", user: formData.user,
-            }));            
+                token:  "jwtOken", user: formData.us, 
+                tipologia: tpl
+            }));   
+
+            sessionStorage.setItem("entorno", 
+                JSON.stringify({
+                    first_name: "Usuario ", id_user: "0",
+                    last_name: "pruebas", profile: "a.b.c.d.e", 
+                    token:  "jwtOken", user: formData.us, 
+                    tipologia: tpl
+                }));
+       
             navigate("/landingpage");            
             setSHCarga(false);            
         }
@@ -86,7 +104,7 @@ const PageLogin = () => {
                     <Form>
                         <Form.Group className="mb-3" >
                             <Form.Label><FaUserTie /> Usuario</Form.Label>
-                            <Form.Control type="user" placeholder="usuario" id="user" onChange={changeText} value={formData.username}/>
+                            <Form.Control type="user" placeholder="usuario" id="us" onChange={changeText} value={formData.us}/>
                             <Form.Text>
                                 <Alert variant="danger" show={msgAlrtUsr} className="p-1 m-0">
                                     <FaRegHandPaper className='mb-1' /> Debe ingresar un usuario válido!!!
@@ -96,7 +114,7 @@ const PageLogin = () => {
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label> <FaKey /> Constraseña</Form.Label>
-                            <Form.Control type="password" placeholder="contraseña"  id="pass" onChange={changeText} onKeyUp={keyPress} value={formData.password}/>
+                            <Form.Control type="password" placeholder="contraseña"  id="pw" onChange={changeText} onKeyUp={keyPress} value={formData.pw}/>
                             <Form.Text>
                                 <Alert variant="danger" show={msgAlrtPwd} className="p-1 m-0">
                                         <FaRegHandPaper className='mb-1' /> Debe ingresar una contraseña válida!!!
