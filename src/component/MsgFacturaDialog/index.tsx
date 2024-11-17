@@ -1,6 +1,6 @@
 import { Button } from 'react-bootstrap';
 import Modal from 'react-bootstrap/Modal';
-import { FaPrint, FaRegCheckCircle } from "react-icons/fa";
+import { FaCashRegister, FaPrint, FaRegCheckCircle } from "react-icons/fa";
 import './style.css';
 
 const MsgFacturaDialog = (props: {Show: boolean, Title: string, FacturaNro: string, HandlerdClickImprimir: any, HandlerdClickCerrar: any, size: string}) => {

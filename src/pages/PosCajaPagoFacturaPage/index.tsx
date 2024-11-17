@@ -481,7 +481,7 @@ const PosCajaPagoFacturaPage = () => {
                                 <Alert show={apiError.idCaja && apiError.idCaja.length > 0} alert="#F3D8DA" msg={apiError.idCaja}/>                    
                             </div>             
                             <div className="col-lg-4 col-sm-12 mb-3">
-                                <label htmlFor="idCliente" className="form-label">* Factura Nro.</label> 
+                                <label htmlFor="idCliente" className="form-label">* Venta Nro.</label> 
                                 <div className="w-100 d-flex ">
                                     <div className="w-100">
                                         <input type="number" min={0} className="form-control text-end" id="idFactura"  placeholder="" value={frmData.idFactura} onChange={handler} />                    

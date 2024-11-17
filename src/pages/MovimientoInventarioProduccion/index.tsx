@@ -53,9 +53,9 @@ const loader = ()=> {
 
 const form: FormData = {
     id              : 0,
-    idPos           : 0,
     idCodigo        : 0, 
     cantidad        : 0,
+    umName          : "",          
     lote            : "",
     fechaMovimiento : "",
     fechaVencimiento: "",    
@@ -74,14 +74,14 @@ const prdInit = {
     descripcion:"", 
     stock: 0, 
     um: "", 
-    fechaVencimiento: getFechaYhora()
+    fechaVencimiento: getFechaYhora().substring(0, 10) 
 };
 
-const PosMovimientoInventario= () => {
+const MovimientoInventarioProduccion= () => {
     
     const emp:State.data = useSelector((state: any) => state.emp);  
     const [estadosVisibles, setEstadosVisibles] = useState(false);
-    const [tituloBoton, setTituloBoton] = useState("Mostrar historial de movimientos");
+    const [tituloBoton, setTituloBoton] = useState("Historial ingreso");
     let [frmData, setFormData] = useState<FormData>(form);    
     const [pending, setPending] = useState(false); 
     let [apiError, setApiError] = useState(ApiErrMsg); 
@@ -91,9 +91,10 @@ const PosMovimientoInventario= () => {
     const [showInfo, setShowInfo] = useState(false);    
     const [showToast, setShowToast] = useState(false);    
     const [operacion, setOperacion] = useState(true); 
-    let [mensajeModal, setMensajeModal] = useState([]);       
+    let [mensajeModal, setMensajeModal] = useState<string[]>();       
     const [btnRef, setBtnRef] = useState("Guardar");        
-    const [findsino, setFindsino] = useState(false);                  
+    const [findsino, setFindsino] = useState(false);          
+    let [opciones, setOpciones] = useState();          
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
@@ -104,6 +105,13 @@ const PosMovimientoInventario= () => {
             cell: (row: any) => <div className="w-100 text-end">{row.id}</div>,    
             width: "80px",  
         },  
+        {
+            name: 'Fecha ingreso',
+            selector: (row: FormData) => row.fechaMovimiento.substring(0, 10),
+            wrap: true,
+            sortable: true, 
+            width: "140px",             
+        },        
         {
             name: 'Código',
             selector: (row: any) => row.idCodigo,
@@ -117,15 +125,8 @@ const PosMovimientoInventario= () => {
             selector: (row: any) => row.nombre,
             wrap: true,
             sortable: true,
-            width: "250px"            
-        },  
-        {
-            name: 'POS',
-            selector: (row: any) => row.nmPos,
-            wrap: true,
-            sortable: true,
-            width: "200px"       
-        },         
+            width: "270px"            
+        },        
         {
             name: 'Cantidad',
             selector: (row: FormData) => row.cantidad,
@@ -133,34 +134,28 @@ const PosMovimientoInventario= () => {
             sortable: true,
             cell: (row: FormData) => <div className="w-100 text-end">{Number(row.cantidad).toFixed(2)}</div>,    
             width: "110px", 
-        },       
-        {    name: 'Lote',
+        }, 
+        {
+            name: 'Medida',
+            selector: (row: FormData) => row.umName,
+            sortable: true,
+            cell: (row: FormData) => <div className="w-100">{row.umName}</div>,    
+            width: "130px", 
+        },               
+        {    
+            name: 'Lote',
             selector: (row: FormData) => row.lote,
             wrap: true,
             sortable: true,
-            width: "200px" 
-        },          
+            width: "250px" 
+        },                    
         {
-            name: 'Fecha',
-            selector: (row: FormData) => row.fechaMovimiento?.substring(0, 10),
+            name: 'Fecha Vencimiento',
+            selector: (row: FormData) => row.fechaVencimiento.substring(0, 10),
             wrap: true,
             sortable: true,            
-        }                           
+        }                                
     ];
-
-    const handler = (e: any,) => {
-
-        const id: string = e.id;
-        const value = e.value;
-        setFormData({ ...frmData, [id]: value });
-
-        apiError = {
-            ...apiError,
-            [id]: [],
-        }
-
-        setApiError({...apiError});
-    } 
 
     const handlertxt = (e: any) => {
 
@@ -177,20 +172,19 @@ const PosMovimientoInventario= () => {
     } 
 
     const listar = async () =>{
-        const response = await httpApiGet("PosMovimientoInventario/GetAll");
+        const response = await httpApiGet("MovimientoInventarioProduccion/GetAll");
         if (response.statusCode >= 400){
             setOperacion(false);
             mensajeModal = [...response.messages];
             setMensajeModal(mensajeModal);            
             setShowInfo(true);
         }else{
+
             const dta: any = [];
             response.data.map((cja: any) => {
                 let obj = {};   
-                const posnm: any = emp.tipologia.sedes.find((itm: any) => (itm.id === cja.idPos));             
-                obj = {...cja, 
-                    nmPos: posnm.nombre
-                };
+                const um: any = emp.tipologia.unidadMedida.filter((itm: any)=>itm.id === cja.um);          
+                obj = {...cja, umName: (um.length > 0) ? um[0].nombre : ""};
                 dta.push(obj);
             });
             data = [...dta];
@@ -205,29 +199,27 @@ const PosMovimientoInventario= () => {
         if (!estadosVisibles){
             listar();
         }
-        setTituloBoton(!estadosVisibles ? "Ocultar historial de movimientos" : "Mostrar historial de movimientos");
+        setTituloBoton(!estadosVisibles ? "Ocultar ingresos" : "Mostrar ingresos");
         setEstadosVisibles(!estadosVisibles);
     }
 
     const OnbtnLimpiar = () => {
         
-
-        setFormData({...form, fechaMovimiento: getFechaYhora().substring(0, 10)});
         setBtnRef("Guardar");
         setApiError(ApiErrMsg);
-        setPrd({...prdInit});
+
+        prd = {...prdInit};
+        setPrd({...prd});
+
+        setFormData({...form, 
+            fechaMovimiento: getFechaYhora().substring(0, 10),
+            fechaVencimiento: getFechaYhora().substring(0, 10) 
+        });
     } 
     
     const OnbtnGuardar = async () => {
         
         mensajeModal =  [];
-
-        if ((frmData.idPos <= 0)){
-            apiError = {
-                ...apiError,            
-                idPos:["Debe seleccionar un POS"],
-            }
-        }
 
         if ((frmData.idCodigo <= 0)){
             apiError = {
@@ -244,7 +236,6 @@ const PosMovimientoInventario= () => {
         }
         
         if ((apiError.idCodigo && (apiError.idCodigo?.length > 0)) 
-            || (apiError.idPos && (apiError.idPos?.length > 0))  
             || (apiError.cantidad && (apiError.cantidad?.length > 0))){
 
             setApiError({...apiError});
@@ -258,80 +249,64 @@ const PosMovimientoInventario= () => {
                 setMensajeModal([...mensajeModal]);
                 setShowInfo(true);    
             }else{
+                const response = await httpApiPPPD("MovimientoInventarioProduccion", "POST", {
+                    "Content-Type" : "application/json"
+                }, frmData);
 
-                //Obtiene el stock del producto buscado en el inventario de productos terminados
-                let response = await httpApiGet(`InventarioProductosTerminados/GetByProductoId/${frmData.idCodigo}`);
-                console.log(response);
                 if (response.statusCode >= 400){
-                    mensajeModal = ["Se ha presentado un error al consultar el stock del inventario de productos terminados. Operación no se pudo realizar."];
+                    mensajeModal = [...response.message];
                     setOperacion(false);
-                    setMensajeModal([...mensajeModal]);
-                    setShowInfo(true);                    
                 }else{
-                    if ((response.data[0].cantidad - frmData.cantidad) < 0){
-                        mensajeModal = [`No hay stock suficiente (${response.data[0].cantidad}) para realizar el ingreso a inventario.`];
-                        setOperacion(false);
-                        setMensajeModal([...mensajeModal]);
-                        setShowInfo(true); 
-                    }else{
-                        // guarda el movimiento
-                        response = await httpApiPPPD("PosMovimientoInventario", "POST", {"Content-Type" : "application/json"}, frmData);
-                        if (response.statusCode >= 400){
-                            mensajeModal = [...response.message];
-                            setOperacion(false);
-                        }else{
-                            mensajeModal = ["Movimiento registrado con éxito!!!"];
-                            setOperacion(true);
-                        }
-                        setMensajeModal([...mensajeModal]);
-                        setShowInfo(true);
-                        prd = {...prdInit};
-                        setPrd({...prd});
-                        setFormData({...form, idPos: frmData.idPos, fechaMovimiento: frmData.fechaMovimiento});
-
-                        listar();  
-                    }
+                    mensajeModal = ["Movimiento registrado con éxito!!!"];
+                    setOperacion(true);
                 }
+                setMensajeModal([...mensajeModal]);
+                setShowInfo(true);
+
+                prd = {...prdInit};
+                setPrd(prd);
+
+                frmData = {...form};
+                setFormData({...frmData, 
+                    fechaMovimiento: getFechaYhora().substring(0, 10),
+                    fechaVencimiento: getFechaYhora().substring(0, 10)
+                });
+
+                estadosVisibles && listar();              
             }
         }
     }  
 
     const buscaProducto = async () =>{
 
-        if (frmData.idPos < 1){
+        const response = await httpApiGet(`inventarioproducto/getProducto/${frmData.idCodigo}`);          
+        if (response.statusCode >= 400){
             setOperacion(false);
-            setMensajeModal(["Debe seleccionar un Pos para buscar el producto!!"]);
+            setMensajeModal(response.messages);
             setShowInfo(true);
-        }else{
-            const response = await httpApiGet(`inventarioproducto/getProducto/${frmData.idCodigo}`);          
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                setMensajeModal(response.messages);
-                setShowInfo(true);
-            }else{      
+        }else{      
 
-                let cant = 0;
-                prd.nombre = response.data[0].nombre;
-                prd.descripcion = response.data[0].descripcion;
-                
-                // trae la unidad de medida
-                let um = emp.tipologia.unidadMedida.filter((itm: any)=>itm.id === response.data[0].unidadMedida);
-                prd.um = (um.length > 0) ? um[0].nombre : "Sin definición";
+            let cant = 0;
+            prd.nombre = response.data[0].nombre;
+            prd.descripcion = response.data[0].descripcion;
+            
+            // trae la unidad de medida
+            const um = emp.tipologia.unidadMedida.filter((itm: any)=>itm.id === response.data[0].unidadMedida);
+            prd.um = (um.length > 0) ? um[0].nombre : "Sin definición";
 
-                // trae la cantidad de stock del ineventario del POS
-                const responseInvPos = await httpApiGet(`Posinventarioproducto/Pos/${frmData.idPos}/GetByProductoId/${frmData.idCodigo}`);
-                if (responseInvPos.statusCode >= 400){
-                    setFindsino(false);
-                    setShowToast(true);                    
-                }else{
-                    setFindsino(true);
-                    setShowToast(true);  
-                    cant =  responseInvPos.data.length > 0 ? responseInvPos.data[0].cantidad : 0;                 
-                }
-                prd.stock =  cant;
-                setPrd({...prd});
-            }                
-        }
+            // trae la cantidad de stock del ineventario
+            const responseInvPos = await httpApiGet(`InventarioProduccion/GetByProductoId/${frmData.idCodigo}`);
+            if (responseInvPos.statusCode >= 400){
+                setFindsino(false);
+                setShowToast(true);                    
+            }else{
+                setFindsino(true);
+                setShowToast(true);  
+                cant =  responseInvPos.data.length > 0 ? responseInvPos.data[0].cantidad : 0;                 
+            }
+            prd.stock =  cant;
+            setPrd({...prd});
+        }                
     }
 
     const changeTextFiltro = (evnt: any) => {
@@ -356,7 +331,15 @@ const PosMovimientoInventario= () => {
 
     }     
 
+    const inicio = async () =>{
+        const res = await init();
+        opciones =  res.data;
+        setOpciones(opciones);
+    }
+
     useEffect(()=>{
+
+        inicio();
 
         frmData.fechaMovimiento = getFechaYhora().substring(0, 10);
         frmData.fechaVencimiento = getFechaYhora().substring(0, 10);
@@ -372,26 +355,13 @@ const PosMovimientoInventario= () => {
                 <div className="container border rounded " style={{"color": "#2A3482"}}>
                     <a id="inicio"></a>
                     <div className="d-flex">
-                        <div className="h3 p-2 m-2  text-center text-wrap w-100">Registro de movimientos de ingreso a inventarios del P.O.S.</div>                                  
+                        <div className="h3 p-2 m-2  text-center text-wrap w-100">Ingreso de materias primas</div>                                  
                     </div>
 
                     <form >
                         <div className='row border '>
                             <div className="row my-3">
                                 <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="idPos" className="form-label">* Pos</label>                
-                                    <GenericSelectPersonalized 
-                                        Data={emp.tipologia.sedes} 
-                                        ValueField="id"
-                                        ValueText="nombre"
-                                        Value={`${frmData.idPos}`} 
-                                        onSelect={handler} 
-                                        ClassName="form-select" 
-                                        id={`idPos`}
-                                    />
-                                    <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
-                                </div>   
-                                <div className="col-lg-4 col-md-12 col-sm-12 offset-lg-4 mb-3">
                                     <label htmlFor="fechaMovimiento" className="form-label">Fecha movimiento</label>                  
                                     <input type="date" className="form-control text-end" id="fechaMovimiento" value={frmData?.fechaMovimiento}  disabled/>                                 
                                 </div>                                                                  
@@ -403,34 +373,34 @@ const PosMovimientoInventario= () => {
                                     <label htmlFor="idCodigo" className="form-label">* Código producto</label>                  
                                     <div className=" d-flex ">
                                         <input type="number" className="form-control text-end" id="idCodigo" min={0} placeholder="" value={frmData?.idCodigo} onChange={handlertxt} /> 
-                                        <Button className="border-0 bg-secondary" onClick={buscaProducto} disabled={(frmData.idPos < 0) && (frmData.idCodigo < 1)}> <FaSearch /> </Button>                                                                              
+                                        <Button className="border-0 bg-secondary" onClick={buscaProducto} disabled={frmData.idCodigo < 1}> <FaSearch /> </Button>                                                                              
                                     </div>
                                     <Alert show={apiError.idCodigo && apiError.idCodigo.length > 0} alert="#F3D8DA" msg={apiError.idCodigo} /> 
                                 </div> 
-                                <div className="col-lg-7 col-md-12 col-sm-12 mb-3">
+                                <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="" className="form-label">Descripción</label>                  
                                     <input type="text" className="form-control " value={`${prd.nombre} - ${prd.descripcion}`} disabled/>                                 
-                                </div>
+                                </div>                                
                                 <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="cantidad" className="form-label">Unidad de medida</label>                  
                                     <input type="text" className="form-control text-end" id="Umedida"  placeholder="" value={prd.um} disabled />                                                                            
                                 </div>                                 
-                                <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="" className="form-label">Stock</label>                  
-                                    <input type="text" className="form-control text-end" value={prd.stock} disabled/>                                 
-                                </div>                                
                             </div>
                             <hr />
                             <div className="row  my-3">
                                 <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="cantidad" className="form-label">* Cantidad</label>                  
-                                    <input type="number" className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handlertxt} /> 
+                                    <input type="number"min={0} className="form-control text-end" id="cantidad"  placeholder="" value={frmData.cantidad} onChange={handlertxt} /> 
                                     <Alert show={apiError.cantidad && apiError.cantidad.length > 0} alert="#F3D8DA" msg={apiError.cantidad} />                                                                             
                                 </div> 
-                                <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
+                                <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="lote" className="form-label">Lote</label>                  
                                     <input type="text" className="form-control" id="lote"  placeholder="" value={frmData.lote} onChange={handlertxt} />                                                                              
-                                </div>                                 
+                                </div>     
+                                <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
+                                    <label htmlFor="versedes" className="form-check-label"></label>                      
+                                    <input type="checkbox" className="form-check-input" id="versedes" role="switch" onChange={verListado} />                               
+                                </div>                                                               
                                 <div className="col-lg-2 col-md-12 col-sm-12 mb-3">
                                     <label htmlFor="fechaVencimiento" className="form-label">Fecha vencimiento</label>                  
                                     <input type="date" className="form-control text-end" id="fechaVencimiento" value={frmData.fechaVencimiento}  onChange={handlertxt} />                                 
@@ -452,7 +422,7 @@ const PosMovimientoInventario= () => {
                         <label htmlFor="versedes" className="form-check-label">{tituloBoton}</label>                       
                         {
                             estadosVisibles ? <input type="checkbox" className="form-check-input" id="versedes" role="switch" onChange={verListado} style={{backgroundColor: "#2A3482"}}/>
-                                            :  <input type="checkbox" className="form-check-input" id="versedes" role="switch" onChange={verListado} />
+                                            : <input type="checkbox" className="form-check-input" id="versedes" role="switch" onChange={verListado} />
                         }                            
                     </div> 
                     {
@@ -510,4 +480,4 @@ const PosMovimientoInventario= () => {
     )
 };
 
-export default PosMovimientoInventario;
+export default MovimientoInventarioProduccion;

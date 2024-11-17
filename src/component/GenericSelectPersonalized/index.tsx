@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { httpApiGet } from "../../lib";
 
-const GenericSelectPersonalized = (props:{Url: string, Value: string, ClassName: string, onSelect: any,
-                              ValueField: string, ValueText: string, id: string, all: string}) =>{
+const GenericSelectPersonalized = (props:{Url?: string, Value: string, ClassName: string, onSelect: any, disabled?: boolean,
+                                    ValueField: string, ValueText: string, id: string, all?: string, Data?: []}) =>{
 
     const [sltPos, setSltPos] = useState([]);
     const [placeholder, setPlaceHolder] = useState("Cargando...");
-    const [value, setValue] = useState({id: "", value: props.Value, text: ""});
+    const [value, setValue] = useState({id: "", value: "", text: ""});
     let [lastItems, setLastitems] = useState(0);
 
     const getApi = async ()=>{
@@ -36,22 +36,32 @@ const GenericSelectPersonalized = (props:{Url: string, Value: string, ClassName:
     }
 
     useEffect(()=>{
-        getApi();
-    }, [props.Value]);
+
+
+        setValue({...value, value: props.Value});
+        //console.log("props select: ", value);
+        if (props.Data){
+            setSltPos(props.Data);  
+            setPlaceHolder("Seleccione opción");   
+            setLastitems(props.Data.length + 1);         
+        }else{
+            getApi();
+        }
+        
+    }, [props]); 
 
     return(
         <>
             <select 
                 id={props.id}
                 className={props.ClassName}
-                value={props.Value} 
+                value={value.value} 
                 onChange={handler}  
-                disabled={false}
+                disabled={props.disabled ? props.disabled : false}
                 title={placeholder}
-                defaultValue={-2}
             >
                 <option value="0" >{placeholder} </option>       
-                <option value={lastItems} >{props.all}</option>                                   
+                {props.all && <option value={lastItems} >{props.all}</option> }                                  
                 {
                     sltPos.map((opc: any, idx: number )=> <option key={idx} value={opc[props.ValueField]} >{`${opc[props.ValueText]}`}</option>)
                 }  

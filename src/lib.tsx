@@ -44,7 +44,7 @@ export async function httpApiDelete(endp: string, metodo: string) {
     }
 }
 
-export async function httpApiGet(endp: string) {
+export async function httpApiGet(endp: string = "") {
     
     try {
         const recurso = `${env.REACT_APP_API_URL_PROD}${endp}`;
@@ -60,7 +60,7 @@ export async function httpApiGet(endp: string) {
     }
     catch(e){
         console.log(" Error: ", e); 
-        return ({statusCode: 500, messages: ["Error a la petición API. Contacte al administrador"], data: []});
+        return ({statusCode: 400, messages: ["Error a la petición API. Contacte al administrador"], data: []});
     }
 }
 
@@ -118,4 +118,17 @@ export const init = async ()=>{
     const response = await httpApiGet("UtiliatriesApi");
     return(response);
 }
+
+export interface responseApi{
+    statusCode: number; 
+    messages: string[];
+    data: object[];
+}
+
+export interface tipoligiaData{
+    id: number; 
+    nombre: string;
+    estado: number;
+}
+
 
