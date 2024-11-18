@@ -12,7 +12,6 @@ import FooterBar from "../../component/FooterBar";
 import ToastAutoHide from "../../component/ToastAutoHide";
 import { useSelector } from "react-redux";
 import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
-import React from "react";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -86,7 +85,7 @@ const PosMovimientoInventarioOut = () => {
     const [estadosVisibles, setEstadosVisibles] = useState(false);
     const [tituloBoton, setTituloBoton] = useState("Mostrar historial de egresos");
     const [frmData, setFormData] = useState({...form});    
-    const [pending] = useState(false); 
+    const [pending, setPending] = useState(false); 
     let [apiError, setApiError] = useState(ApiErrMsg); 
     let [data, setData] = useState([]);   
     let [prd, setPrd] = useState({...prdInit});   
@@ -151,6 +150,12 @@ const PosMovimientoInventarioOut = () => {
             sortable: true,            
         }                           
     ];
+
+    const getOption = (opt: number) => {
+        const slt = document.getElementById('idPos');
+        const opc = slt[opt];
+        return(opc.text);
+    }
 
     const handler = (e: any) => {
 

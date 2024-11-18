@@ -65,7 +65,7 @@ const ApiErrMsg: ApiErrorMessage = {
 const ProductoCompuesto = () => {
     
     const [estadosVisibles, setEstadosVisibles] = useState(false);
-    const [tituloBoton, setTituloBoton] = useState("Mostrar unidades");
+    const [tituloBoton, setTituloBoton] = useState("Mostrar productos compuesto");
     let [frmData, setFormData] = useState(form);    
     const [pending, setPending] = useState(false); 
     // eslint-disable-next-line prefer-const

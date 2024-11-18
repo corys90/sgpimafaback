@@ -151,7 +151,7 @@ const TipoProducto = () => {
         if (!estadosVisibles){
             listar();
         }
-        setTituloBoton(!estadosVisibles ? "Ocultar los tipos de embalajes" : "Mostrar los tipos de embalajes");
+        setTituloBoton(!estadosVisibles ? "Ocultar los tipos" : "Mostrar los tipos");
         setEstadosVisibles(!estadosVisibles);
     }
 
@@ -279,7 +279,7 @@ const TipoProducto = () => {
                         <label htmlFor="" className="h3 p-2 m-2">Tipos de productos</label>
                         <form className='row border p-2 m-2'>
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                                <label htmlFor="nombre" className="form-label">* Nombre del estado</label>                
+                                <label htmlFor="nombre" className="form-label">* Nombre</label>                
                                 <input type="text" className="form-control" id="nombre" placeholder="" value={frmData.nombre} onChange={handler} disabled={(btnRef == "Actualizar")}/>
                                 <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre}/>
                             </div>

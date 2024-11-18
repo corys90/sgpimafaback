@@ -6,7 +6,9 @@ import Alert from "../../component/Alert";
 import ApiErrorMessage from "./Dtos/ApiErrorMessage";
 import FormData from "./Dtos/FormData";
 import MsgDialog from "../../component/MsgDialog";
-import { formatDate, httpApiDelete, httpApiGet, httpApiPPPD } from "../../lib";
+import { formatDate, getFechaYhora, httpApiDelete, httpApiGet, httpApiPPPD } from "../../lib";
+import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
+import { useSelector } from "react-redux";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -76,24 +78,17 @@ const formaPago = [{id:1, forma:"Efectivo"}, {id:2, forma:"Tarjeta Débito"}, {i
 
 const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pago?: any}) => {
     
+    const emp:State.data = useSelector((state: any) => state.emp);  
     const [estadosVisibles, setEstadosVisibles] = useState(false);
     const [tituloBoton, setTituloBoton] = useState("Mostrar Pagos");
     let [frmData, setFormData] = useState(form);    
     const [pending, setPending] = useState(false); 
-    // eslint-disable-next-line prefer-const
     let [apiError, setApiError] = useState(ApiErrMsg); 
     let [data, setData] = useState([]);   
     const [showInfo, setShowInfo] = useState(false);    
     const [operacion, setOperacion] = useState(false); 
     let [mensajeModal, setMensajeModal] = useState([]);       
     const [btnRef, setBtnRef] = useState("Pagar");      
-    let [sltPos, setSltPos] = useState([]);     
-    let [sltCaja, setSltCaja] = useState([]);  
-
-    // Obtiene la fecha y hora actual en formato YYYY-MM-DDTHH:MM:SS
-    const hh = (new Date().getHours()) < 10 ? `0${new Date().getHours()}`:`${new Date().getHours()}`;
-    const mm = (new Date().getMinutes()) < 10 ? `0${new Date().getMinutes()}`:`${new Date().getMinutes()}`; 
-    const fechaYhora = `${formatDate(new Date())}T${hh}:${mm}:00`;      
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
@@ -182,6 +177,22 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
         },                             
     ];
 
+    const handlerPersonalizedSelect = (e: any) => {
+
+        const id: string = e.id;
+        const value: string = e.value;
+
+        frmData = {...frmData, [id]: value };
+        setFormData({ ...frmData});
+
+        apiError = {
+            ...apiError,
+            [id]: [],
+        }
+        setApiError({...apiError});
+        console.log(frmData);
+    }
+
     const handler = (e: any) => {
 
         const id: string = e.target.id;
@@ -221,9 +232,9 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
             response.data.map((pgo: any) => {
                 let obj = {};
                 //se busca el nombre del pos
-                const pos: any = sltPos.find((ps: any) => ps.id === pgo.idPos);
+                const pos: any = emp.tipologia.sedes.find((ps: any) => ps.id === pgo.idPos);
                 //se busca el nombre de la caja                
-                const cj: any = sltCaja.find((cj: any) => cj.id === pgo.idCaja);               
+                const cj: any = emp.tipologia.cajas.find((cj: any) => cj.id === pgo.idCaja);               
                 obj = {...pgo, nmPos: pos.nombre, nmCja:cj.nombre}
                 dta.push(obj);    
             });
@@ -321,8 +332,12 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
         }else{
             
             if (btnRef === "Pagar"){
-                frmData.createdAt = fechaYhora;
-                frmData.updatedAt = fechaYhora;
+                frmData.createdAt = frmData.updatedAt = getFechaYhora();
+
+                // Si el valor devuelto es negativo, no guardarlo
+                frmData = {...frmData, valorDevuelto: (frmData.valorDevuelto < 0) ? 0: frmData.valorDevuelto};
+                setFormData(frmData);
+
                 //Consumir service de /Poscajapagofactura, método Post
                 const response = await httpApiPPPD("PosCajaPagofactura", "POST", {
                     "Content-Type" : "application/json"
@@ -366,12 +381,6 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
         }
     }  
 
-    const edita = (row: any) =>{
-        row = {...row, fechaPago: row.fechaPago.substring(0, 10)}
-        setFormData({...row});
-        setBtnRef("Actualizar");
-    };
-
     const borraSiNo = async (row: FormData)=>{
 
         const response = await httpApiDelete(`PosCajaPagofactura/${row.id}`, "Delete");
@@ -386,44 +395,13 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
         }
     }
 
+    console.log(emp);
+
     useEffect(()=>{
-
-        const getTipoIdPos = async ()=>{
-            const response = await httpApiGet("SedePos");
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                mensajeModal = [...response.messages];
-    
-                setMensajeModal(mensajeModal);            
-                setShowInfo(true);
-            }else{
-                const fltr: any = response.data.filter(obj => obj.estado !== 1);
-                sltPos = [...fltr];
-                setSltPos(sltPos);                   
-            }
-        }
-
-        const getCajas = async ()=>{
-            const response = await httpApiGet("PosCaja");
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                mensajeModal = [...response.messages];
-    
-                setMensajeModal(mensajeModal);            
-                setShowInfo(true);
-            }else{
-                const fltr: any = response.data.filter(obj => obj.estado !== 1);
-                sltCaja = [...fltr];
-                setSltCaja(sltCaja);                   
-            }
-        }        
-
-        getTipoIdPos();
-        getCajas();      
-
+2
         frmData.idFactura = parseInt(`${props.Factura}`);
         frmData.valorPagado = parseInt(`${props.Pago}`);    
-        frmData.fechaPago = fechaYhora.substring(0, 10);    
+        frmData.fechaPago = getFechaYhora().substring(0, 10);    
         setFormData({...frmData});
 
     }, []); 
@@ -435,27 +413,35 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
             <form className='row border p-2 m-2'>
                 <div className="col-lg-4  col-sm-12 mb-3">
                     <label htmlFor="idPos" className="form-label">* Pos</label>                
-                    <select className="form-select" aria-label="Default select example" id="idPos" value={frmData.idPos} onChange={handler}  disabled={(btnRef == "Actualizar")}>
-                        <option value="0" >Seleccione POS</option>
-                        {
-                            sltPos.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.nombre}`}</option>)
-                        }    
-                    </select>
+                    <GenericSelectPersonalized 
+                        Data={emp.tipologia.sedes} 
+                        ValueField="id"
+                        ValueText="nombre"
+                        Value={`${frmData.idPos}`} 
+                        onSelect={handlerPersonalizedSelect} 
+                        ClassName="form-select" 
+                        id={`idPos`}
+                        disabled={(btnRef == "Actualizar")}
+                    /> 
                     <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
                 </div> 
                 <div className="col-lg-4  col-sm-12 mb-3">
                     <label htmlFor="idPos" className="form-label">* Caja</label>   
-                    <select className="form-select" aria-label="Default select example" id="idCaja" value={frmData.idCaja} onChange={handler}  disabled={(btnRef == "Actualizar")}>
-                        <option value="0" >Seleccione caja</option>
-                        {
-                            sltCaja.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.nombre}`}</option>)
-                        }    
-                    </select>
+                    <GenericSelectPersonalized 
+                        Data={emp.tipologia.cajas.filter((item: any) => item.idPos === parseInt(frmData.idPos.toString()))} 
+                        ValueField="id"
+                        ValueText="nombre"
+                        Value={`${frmData.idCaja}`} 
+                        onSelect={handlerPersonalizedSelect} 
+                        ClassName="form-select" 
+                        id={`idCaja`}
+                        disabled={(parseInt(frmData.idPos.toString()) === 0)}
+                    />                     
                     <Alert show={apiError.idCaja && apiError.idCaja.length > 0} alert="#F3D8DA" msg={apiError.idCaja}/>                    
                 </div>             
                 <div className="col-lg-4 col-sm-12 mb-3">
                     <label htmlFor="idPos" className="form-label">&nbsp;</label>  
-                    <div className="form-label text-center h3 border border-3 rounded">Factura Nro. {frmData.idFactura}</div>                    
+                    <div className="form-label text-center h3 border border-3 rounded">Venta Nro. {frmData.idFactura}</div>                    
                 </div>    
                 <div className="col-lg-4  col-sm-12 mb-3">
                     <label htmlFor="idPos" className="form-label">* Forma de pago</label>   
