@@ -41,7 +41,7 @@ function App() {
           <Route path="/posmovimientoinventarioout" element={<PosMovimientoInventarioOut />}/>      
           <Route path="/devolucionposplanta" element={<DevolucionPOSPlanta />}/>            
           <Route path="/posmovimientoinventario" element={<PosMovimientoInventario />}/>                     
-          <Route path="/posfacturacionlist" element={<PosFacturasList />}/>             
+          <Route path="/facturalist" element={<PosFacturasList />}/>             
           <Route path="/pospagofacturacionpage" element={<PosCajaPagoFacturaPage />}/>              
           <Route path="/posfacturacion" element={<PosFacturas />}/>            
           <Route path="/inventario" element={<InventarioProductos />}/>       

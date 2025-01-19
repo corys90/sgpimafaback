@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "react-bootstrap";
 import DataTable from "react-data-table-component";
 import { FaPencilAlt, FaRegTrashAlt, FaSearch } from "react-icons/fa";
@@ -6,8 +6,11 @@ import Alert from "../../component/Alert";
 import ApiErrorMessage from "./Dtos/ApiErrorMessage";
 import FormData from "./Dtos/FormData";
 import MsgDialog from "../../component/MsgDialog";
-import { formatDate, httpApiDelete, httpApiGet, httpApiPPPD } from "../../lib";
+import { formatDate, getFechaYhora, httpApiDelete, httpApiGet, httpApiPPPD } from "../../lib";
 import BarraMenu from "../../component/BarraMenu";
+import FooterBar from "../../component/FooterBar";
+import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
+import { useSelector } from "react-redux";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -77,8 +80,7 @@ const formaPago = [{id:1, forma:"Efectivo"}, {id:2, forma:"Tarjeta Débito"}, {i
 
 const PosCajaPagoFacturaPage = () => {
     
-    const [estadosVisibles, setEstadosVisibles] = useState(false);
-    const [tituloBoton, setTituloBoton] = useState("Mostrar Pagos");
+    const emp:State.data = useSelector((state: any) => state.emp);  
     let [frmData, setFormData] = useState(form);    
     const [pending, setPending] = useState(false); 
     // eslint-disable-next-line prefer-const
@@ -87,14 +89,9 @@ const PosCajaPagoFacturaPage = () => {
     const [showInfo, setShowInfo] = useState(false);    
     const [operacion, setOperacion] = useState(false); 
     let [mensajeModal, setMensajeModal] = useState([]);       
-    const [btnRef, setBtnRef] = useState("Guardar/Pagar");      
-    let [sltPos, setSltPos] = useState([]);     
-    let [sltCaja, setSltCaja] = useState([]);  
-
-    // Obtiene la fecha y hora actual en formato YYYY-MM-DDTHH:MM:SS
-    const hh = (new Date().getHours()) < 10 ? `0${new Date().getHours()}`:`${new Date().getHours()}`;
-    const mm = (new Date().getMinutes()) < 10 ? `0${new Date().getMinutes()}`:`${new Date().getMinutes()}`; 
-    const fechaYhora = `${formatDate(new Date())}T${hh}:${mm}:00`;      
+    const [btnRef, setBtnRef] = useState("Guardar/Pagar");       
+    let [valorAdeudado, setValorAdeudado] = useState(0);  
+    const vrRef = useRef();          
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
@@ -109,7 +106,7 @@ const PosCajaPagoFacturaPage = () => {
         {
             name: 'POS',
             selector: (row: FormData) => row.nmPos,
-            width: "130px",
+            width: "170px",
             wrap: true,
             sortable: true,
         }, 
@@ -121,28 +118,12 @@ const PosCajaPagoFacturaPage = () => {
             sortable: true,
         },        
         {
-            name: 'Factura',
-            selector: (row: FormData) => row.idFactura,
-            width: "100px",
-            right: "true",
-            sortable: true, 
-            format : (row)=> row.idFactura.toLocaleString().padStart(7, '0')                               
-        }, 
-        {
             name: 'Pago',
             selector: (row: FormData) => formaPago[row.formaPago - 1].forma,
-            width: "110px",
+            width: "150px",
             wrap: true,
             sortable: true,            
         },         
-        {
-            name: 'Valor Factura',
-            selector: (row: FormData) => row.valorPagado,
-            width: "140px",
-            right: "true",
-            sortable: true,  
-            format : (row)=> row.valorPagado.toLocaleString()                 
-        }, 
         {
             name: 'Recibido',
             selector: (row: FormData) => row.valorRecibido,
@@ -169,29 +150,46 @@ const PosCajaPagoFacturaPage = () => {
             name: 'Acciones',
             selector: (row: FormData) => 
                 <div className='d-flex gap-3 justify-center align-items-center'>
-                        <div>
+                        {/* <div>
                             <a href='#inicio' className={"text-warning"} title="Edita" onClick={()=>edita(row)}>
                                 <FaPencilAlt style={{width: "20px", height: "20px"}}/>
                             </a>
-                        </div> 
-                        {/* <div>
+                        </div>  */}
+                        <div>
                             <a href='#!' className=' text-danger'  title="Borra" onClick={()=>borraSiNo(row)}>
                                 <FaRegTrashAlt style={{width: "20px", height: "20px"}}/>
                             </a>
-                        </div> */}
+                        </div>
                 </div>,
             width: "110px",
         },                             
     ];
+
+    const handlerPersonalizedSelect = (e: any) => {
+
+        const id: string = e.id;
+        const value: string = e.value;
+
+        frmData = {...frmData, [id]: value };
+        setFormData({ ...frmData});
+
+        apiError = {
+            ...apiError,
+            [id]: [],
+        }
+        setApiError({...apiError});
+    }
 
     const handler = (e: any) => {
 
         const id: string = e.target.id;
         let value = e.target.value;
         if (id === "valorRecibido"){
-            value = parseFloat(value);
+            const vr = parseInt(vrRef.current.value ? vrRef.current.value : 0);
+            frmData.valorDevuelto = ((vr - valorAdeudado) < 0) ? 0 : (vr - valorAdeudado);
         }
         setFormData({ ...frmData, [id]: value });
+
         apiError = {
             ...apiError,
             [id]: [],
@@ -200,60 +198,62 @@ const PosCajaPagoFacturaPage = () => {
 
     }
 
-    const handlerCalculo = ()=>{
-
-        const vr = parseInt(`${frmData.valorRecibido}`);
-        const vf = parseInt(`${frmData.valorPagado}`);
-        frmData.valorDevuelto = vr - vf;
-        setFormData({ ...frmData}); 
-
-    }
-
     const listar = async () =>{
 
-        const response = await httpApiGet(`PosCajaPagofactura`);
+        const response = await httpApiGet(`PosCajaPagoFactura/byFactura/${frmData.idFactura}`);
         if (response.statusCode >= 400){
             setOperacion(false);
             mensajeModal = [...response.messages];
             setMensajeModal(mensajeModal);            
             setShowInfo(true);
         }else{
+            console.log("respoi pagos: ", response.data);
             const dta: any = [];
             response.data.map((pgo: any) => {
                 let obj = {};
                 //se busca el nombre del pos
-                const pos: any = sltPos.find((ps: any) => ps.id === pgo.idPos);
+                const pos: any = emp.tipologia.sedes.find((ps: any) => ps.id === pgo.idPos);
                 //se busca el nombre de la caja                
-                const cj: any = sltCaja.find((cj: any) => cj.id === pgo.idCaja);               
+                const cj: any = emp.tipologia.cajas.find((cj: any) => cj.id === pgo.idCaja);               
                 obj = {...pgo, nmPos: pos.nombre, nmCja:cj.nombre}
                 dta.push(obj);    
             });
 
             data = [...dta];        
-            setData(data);                   
-        }
-    }
+            setData(data);   
 
-    const verListado = async () => {
-        
-        if (!estadosVisibles){
-            listar();
+            // realiza la sumatoria de los valores recibidos y saber lo adeudado en el recibo de compras
+            valorAdeudado = data.reduce((accumulator: number, currentValue: any) => {
+                return accumulator + currentValue.valorRecibido;
+            }, 0);  
+            setValorAdeudado(frmData.valorPagado - valorAdeudado);
         }
-        setTituloBoton(!estadosVisibles ? "Ocultar Pagos" : "Mostrar Pagos");
-        setEstadosVisibles(!estadosVisibles);
     }
 
     const OnbtnLimpiar = () => {
         
-        //borra las cajas de datos de entrada
-        const inputsArray = Object.entries(frmData);
-        const clearInputsArray = inputsArray.map(([key]) => [key, '']); // Recorremos el arreglo y retornamos un nuevo arreglo de arreglos conservando el key
-        const inputsJson = Object.fromEntries(clearInputsArray); //Convertimos el arreglo de arreglos nuevamente a formato json
-        frmData = {...inputsJson, id: 0, idCaja: 0, idPos: 0, formaPago: 0, valorRecibido: 0, valorDevuelto: 0, valorPagado: 0};
-        setFormData(frmData);
+        // borra las cajas de datos de entrada
+        frmData.valorRecibido = 0;
+        frmData.valorDevuelto = 0;
+        setFormData({...frmData});
         setBtnRef("Guardar/Pagar");
         setApiError(ApiErrMsg);
     } 
+
+    const reset = () => {
+        
+        // borra las cajas de datos de entrada
+        frmData.idFactura = 0;
+        frmData.formaPago = 0;
+        frmData.valorPagado = 0;
+        frmData.valorRecibido = 0;
+        frmData.valorDevuelto = 0;
+        setFormData({...frmData});
+        setValorAdeudado(0);
+        setBtnRef("Guardar/Pagar");
+        setApiError(ApiErrMsg);
+        setData([]);
+    }     
     
     const OnbtnGuardar = async () => {
         
@@ -307,19 +307,12 @@ const PosCajaPagoFacturaPage = () => {
                 ...apiError,            
                 formaPago:["Debe seleccionar una forma de pago"],
             }               
-        }  
-        
-        if (frmData.valorPagado === 0){
-            apiError = {
-                ...apiError,            
-                valorPagado:["Debe buscar la factura a pagar para obtener su valor"],
-            }               
         }          
 
         if ((apiError.idCaja && (apiError.idCaja?.length > 0)) 
             || (apiError.idPos && (apiError.idPos?.length > 0))
-            || (apiError.valorPagado && (apiError.valorPagado?.length > 0))
-            || (apiError.idFactura && (apiError.idFactura?.length > 0))       
+            || (apiError.idFactura && (apiError.idFactura?.length > 0)) 
+            || (apiError.formaPago && (apiError.formaPago?.length > 0))                    
             || (apiError.valorRecibido && (apiError.valorRecibido?.length > 0)
             || (apiError.valorPagado && (apiError.valorPagado?.length > 0))
             || (apiError.fechaPago && (apiError.fechaPago?.length > 0))))
@@ -329,30 +322,46 @@ const PosCajaPagoFacturaPage = () => {
 
             if (btnRef === "Guardar/Pagar"){
 
-                frmData.createdAt = fechaYhora;
-                frmData.updatedAt = fechaYhora;
+                // realiza la sumatoria de los valores recibidos/abonados
+                const sumaValPag = data.reduce((accumulator: number, currentValue: any) => {
+                    return accumulator + currentValue.valorRecibido;
+                }, 0);
+                console.log("Pago : ", frmData);
 
-                //Consumir service de /Poscajapagofactura, método Post
-                const response = await httpApiPPPD("PosCajaPagofactura", "POST", {
-                    "Content-Type" : "application/json"
-                }, frmData);
-
-                if (response.statusCode >= 400){
+                if (frmData.valorRecibido > (frmData.valorPagado - sumaValPag)){
                     setOperacion(false);
-                    mensajeModal = [...response.messages];
-
+                    setMensajeModal(["El valor recibido supera el valor adeudado del recibo de compra."]);            
+                    setShowInfo(true);                    
                 }else{
-                    setOperacion(true);
-                    // actualiza la grilla
-                    estadosVisibles && listar();
-                    msg = "Se ha guardado el pago exitosamente!!!";
-                    mensajeModal.push(msg);
-                    OnbtnLimpiar();
-                } 
+                    frmData.createdAt = frmData.updatedAt = getFechaYhora();
 
+                    // Si el valor devuelto es negativo, no guardarlo
+                    frmData = {...frmData, valorDevuelto: (frmData.valorDevuelto < 0) ? 0: frmData.valorDevuelto};
+                    setFormData(frmData);
+
+                    //Consumir service de /Poscajapagofactura, método Post
+                    const response = await httpApiPPPD("PosCajaPagofactura", "POST", {
+                        "Content-Type" : "application/json"
+                    }, frmData);
+    
+                    if (response.statusCode >= 400){
+                        setOperacion(false);
+                        mensajeModal = [...response.messages];
+    
+                    }else{
+                        setOperacion(true);
+                        // actualiza la grilla
+                        listar();
+                        msg = "Se ha guardado el pago exitosamente!!!";
+                        mensajeModal.push(msg);
+                        OnbtnLimpiar();
+                    } 
+                    setMensajeModal(mensajeModal);            
+                    setShowInfo(true);        
+                }
             }else{
 
-                frmData.updatedAt = fechaYhora;
+                frmData.updatedAt = getFechaYhora();
                 //Consumir service de /PosTipoIdCliente, método Put
                 const response = await httpApiPPPD(`PosCajaPagofactura/${frmData.id}`, "PUT", {
                     "Content-Type" : "application/json"
@@ -363,25 +372,16 @@ const PosCajaPagoFacturaPage = () => {
                 }else{
                     setOperacion(true);
                     // actualiza la grilla
-                    if (estadosVisibles){
-                        listar();
-                    }
+                    listar();
                     msg = "Se ha actualizado la información exitosamente!!!"
                     mensajeModal.push(msg);
                     OnbtnLimpiar();
+                    setMensajeModal(mensajeModal);            
+                    setShowInfo(true);                      
                 }  
             }
-
-            setMensajeModal(mensajeModal);            
-            setShowInfo(true);
         }
     }  
-
-    const edita = (row: any) =>{
-        row = {...row, fechaPago: row.fechaPago.substring(0, 10)}
-        setFormData({...row});
-        setBtnRef("Actualizar/Pagar");
-    };
 
     const borraSiNo = async (row: FormData)=>{
 
@@ -397,14 +397,16 @@ const PosCajaPagoFacturaPage = () => {
     }
 
     const buscaFactura = async ()=>{
-        const response = await httpApiGet(`Posfactura/${frmData.idFactura}`);
+        const response = await httpApiGet(`PosFacturacion/${frmData.idFactura}`);
         if (response.statusCode >= 400){
             setOperacion(false);
             mensajeModal = ["La factura solicitada no se encuentra o no existe"];
             setMensajeModal(mensajeModal);            
             setShowInfo(true);
         }else{
+            listar();
             frmData.valorPagado = response.data[0].total
+            setValorAdeudado(response.data[0].total);
             setFormData({...frmData});
             apiError.valorPagado = [];
             setApiError({...apiError});          
@@ -413,175 +415,156 @@ const PosCajaPagoFacturaPage = () => {
 
     useEffect(()=>{
 
-        const getTipoIdPos = async ()=>{
-            const response = await httpApiGet("SedePos");
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                mensajeModal = [...response.messages];
-    
-                setMensajeModal(mensajeModal);            
-                setShowInfo(true);
-            }else{
-                const fltr: any = response.data.filter(obj => obj.estado !== 1);
-                sltPos = [...fltr];
-                setSltPos(sltPos);                   
-            }
-        }
-
-        const getCajas = async ()=>{
-            const response = await httpApiGet("PosCaja");
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                mensajeModal = [...response.messages];
-    
-                setMensajeModal(mensajeModal);            
-                setShowInfo(true);
-            }else{
-                const fltr: any = response.data.filter(obj => obj.estado !== 1);
-                sltCaja = [...fltr];
-                setSltCaja(sltCaja);                   
-            }
-        }        
-
-        getTipoIdPos();
-        getCajas();      
-  
-        frmData.fechaPago = fechaYhora.substring(0, 10);    
+        frmData.fechaPago = getFechaYhora().substring(0, 10);   
+        frmData.idPos = emp.sede; 
+        const ncajas = emp.tipologia.cajas.filter((item: any) => item.idPos === parseInt(frmData.idPos.toString()));
+        frmData.idCaja = ncajas.length > 0 ? ((ncajas.length <= 1) ? ncajas[0].id : 0): 0;         
         setFormData({...frmData});
 
     }, []); 
 
     return(
-        <>
-            <div className=' vh-100 ms-5 me-5 border rounded-3 shadow'>
-                <BarraMenu /> 
-                <div  className='d-flex justify-content-evenly align-items-center bg-body-tertiary'>
-                    <div className="border p-1 rounded w-100" style={{"color": "#2A3482"}}>
-                        <a id="inicio"></a>
-                        {/* <label htmlFor="" className="h3 p-2 m-2">Pago factura</label> */}
-                        <form className='row border p-2 m-2'>
-                            <div className="col-lg-4  col-sm-12 mb-3">
-                                <label htmlFor="idPos" className="form-label">* Pos</label>                
-                                <select className="form-select" aria-label="Default select example" id="idPos" value={frmData.idPos} onChange={handler}  disabled={(btnRef == "Actualizar")}>
-                                    <option value="0" >Seleccione POS</option>
-                                    {
-                                        sltPos.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.nombre}`}</option>)
-                                    }    
-                                </select>
-                                <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
-                            </div> 
-                            <div className="col-lg-4  col-sm-12 mb-3">
-                                <label htmlFor="idPos" className="form-label">* Caja</label>   
-                                <select className="form-select" aria-label="Default select example" id="idCaja" value={frmData.idCaja} onChange={handler}  disabled={(btnRef == "Actualizar")}>
-                                    <option value="0" >Seleccione caja</option>
-                                    {
-                                        sltCaja.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.nombre}`}</option>)
-                                    }    
-                                </select>
-                                <Alert show={apiError.idCaja && apiError.idCaja.length > 0} alert="#F3D8DA" msg={apiError.idCaja}/>                    
-                            </div>             
-                            <div className="col-lg-4 col-sm-12 mb-3">
-                                <label htmlFor="idCliente" className="form-label">* Venta Nro.</label> 
-                                <div className="w-100 d-flex ">
-                                    <div className="w-100">
-                                        <input type="number" min={0} className="form-control text-end" id="idFactura"  placeholder="" value={frmData.idFactura} onChange={handler} />                    
-                                    </div>                         
-                                    <div className="">                    
-                                        <Button className=" btn-secondary " onClick={buscaFactura} disabled={frmData.idFactura === 0} > <FaSearch /></Button>   
-                                    </div>                      
-                                </div>  
-                                <Alert show={apiError.idFactura && apiError.idFactura.length > 0} alert="#F3D8DA" msg={apiError.idFactura}/>                                     
-                            </div>    
-                            <div className="col-lg-4  col-sm-12 mb-3">
-                                <label htmlFor="idPos" className="form-label">* Forma de pago</label>   
-                                <select className="form-select" aria-label="Default select example" id="formaPago" value={frmData.formaPago} onChange={handler}>
-                                    <option value="0" >Seleccione forma de pago</option>
-                                    {
-                                        formaPago.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.forma}`}</option>)
-                                    }    
-                                </select>
-                                <Alert show={apiError.formaPago && apiError.formaPago.length > 0} alert="#F3D8DA" msg={apiError.formaPago}/>                    
-                            </div> 
-                            
-                            <div className="col-lg-4 col-md-12 col-sm-12 mb-3 offset-lg-4">
-                                <label htmlFor="valor" className="form-label">Fecha de pago</label>                  
-                                <input type="date" className="form-control text-end" id="fechaPago"  placeholder="" value={frmData.fechaPago} onChange={handler} />
-                                <Alert show={apiError.fechaPago && apiError.fechaPago.length > 0} alert="#F3D8DA" msg={apiError.fechaPago} />
-                            </div> 
+        <div className="container">
+            <BarraMenu />    
+            <div>
+                <div  className="container border rounded " style={{"color": "#2A3482"}}>
+                        <div className="border p-1 rounded w-100" style={{"color": "#2A3482"}}>
+                            <a id="inicio"></a>
+                            {/* <label htmlFor="" className="h3 p-2 m-2">Pago factura</label> */}
+                            <form className='row border p-2 m-2'>
+                                <div className="col-lg-4  col-sm-12 mb-3">
+                                    <label htmlFor="idPos" className="form-label">* Pos</label>                
+                                    <GenericSelectPersonalized 
+                                        Data={emp.tipologia.sedes} 
+                                        ValueField="id"
+                                        ValueText="nombre"
+                                        Value={`${frmData.idPos}`} 
+                                        onSelect={handlerPersonalizedSelect} 
+                                        ClassName="form-select" 
+                                        id={`idPos`}
+                                        disabled={true}
+                                    />                                                                       
+                                    <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
+                                </div> 
+                                <div className="col-lg-4  col-sm-12 mb-3">
+                                    <label htmlFor="idCaja" className="form-label">* Caja</label>   
+                                    <GenericSelectPersonalized 
+                                        Data={emp.tipologia.cajas.filter((item: any) => item.idPos === parseInt(frmData.idPos.toString()))} 
+                                        ValueField="id"
+                                        ValueText="nombre"
+                                        Value={`${frmData.idCaja}`} 
+                                        onSelect={handlerPersonalizedSelect} 
+                                        ClassName="form-select" 
+                                        id={`idCaja`}
+                                        // disabled={(emp.tipologia.cajas.filter((item: any) => item.idPos === parseInt(frmData.idPos.toString())).length <= 1)}
+                                    />                                     
+                                    <Alert show={apiError.idCaja && apiError.idCaja.length > 0} alert="#F3D8DA" msg={apiError.idCaja}/>                    
+                                </div>             
+                                <div className="col-lg-4 col-sm-12 mb-3">
+                                    <label htmlFor="idCliente" className="form-label">* Venta Nro.</label> 
+                                    <div className="w-100 d-flex ">
+                                        <div className="w-100">
+                                            <input type="number" min={0} className="form-control text-end" id="idFactura"  placeholder="" value={frmData.idFactura} onChange={handler} />                    
+                                        </div>                         
+                                        <div className="">                    
+                                            <Button className=" btn-secondary " onClick={buscaFactura} disabled={frmData.idFactura === 0} > <FaSearch /></Button>   
+                                        </div>                      
+                                    </div>  
+                                    <Alert show={apiError.idFactura && apiError.idFactura.length > 0} alert="#F3D8DA" msg={apiError.idFactura}/>                                     
+                                </div>    
+                                <div className="col-lg-4  col-sm-12 mb-3">
+                                    <label htmlFor="idPos" className="form-label">* Forma de pago</label>   
+                                    <GenericSelectPersonalized 
+                                        Data={formaPago} 
+                                        ValueField="id"
+                                        ValueText="forma"
+                                        Value={`${frmData.formaPago}`} 
+                                        onSelect={handlerPersonalizedSelect} 
+                                        ClassName="form-select" 
+                                        id={`formaPago`}
+                                        PersonalizedText="Seleccione forma de pago"
+                                    />                                      
+                                    <Alert show={apiError.formaPago && apiError.formaPago.length > 0} alert="#F3D8DA" msg={apiError.formaPago}/>                    
+                                </div> 
+                                
+                                <div className="col-lg-4 col-md-12 col-sm-12 mb-3 offset-lg-4">
+                                    <label htmlFor="valor" className="form-label">Fecha de pago</label>                  
+                                    <input type="date" className="form-control text-end" id="fechaPago"  placeholder="" value={frmData.fechaPago} onChange={handler} disabled/>
+                                    <Alert show={apiError.fechaPago && apiError.fechaPago.length > 0} alert="#F3D8DA" msg={apiError.fechaPago} />
+                                </div> 
 
-                            <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                                <div className="form-label text-center h3 border border-3 rounded">Valor factura</div> 
-                                <div className="form-label text-center h3 border border-3 rounded" style={{backgroundColor: "#EEEDEC"}}>${frmData.valorPagado?.toLocaleString()}</div>    
-                                <Alert show={apiError.valorPagado && apiError.valorPagado.length > 0} alert="#F3D8DA" msg={apiError.valorPagado} />                                                      
-                            </div> 
+                                <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                    <div className="form-label text-center h3 border border-3 rounded">Valor recibo</div> 
+                                    <div className="form-label text-center h3 border border-3 rounded" style={{backgroundColor: "#EEEDEC"}}>${frmData.valorPagado?.toLocaleString()}</div>                                                        
+                                </div> 
 
-                            <div className="col-lg-4 col-md-12 col-sm-12 mb-3 offset-lg-4">
-                                <div className="form-label text-center h3 border border-3 rounded">Valor recibido</div>               
-                                <input type="number" className="border rounded border-3 text-center w-100 fw-bold h3" id="valorRecibido"  placeholder="" value={frmData.valorRecibido}  
-                                    onChange={handler} onKeyUp={handlerCalculo} inputMode="numeric"
-                                    style={{height: "40px"}}
-                                />
-                                <Alert show={apiError.valorRecibido && apiError.valorRecibido.length > 0} alert="#F3D8DA" msg={apiError.valorRecibido} />
-                            </div>             
-                    
-                            <div className="row d-flex justify-content-center">
-                                <div className="col-lg-4 col-md-12 col-sm-12 ">
-                                    <Button className="m-1 p-2 btn-success w-100" id="btnGuardar" onClick={OnbtnGuardar} >{btnRef}</Button>   
-                                </div>   
-                                <div className="col-lg-4 col-md-12 col-sm-12 ">
-                                    <Button className="m-1 p-2 btn-danger w-100 " id="btnLimpiar" >Limpiar</Button>      
-                                </div>                         
-                            </div>                    
-                        </form> 
+                                <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                    <div className="form-label text-center h3 border border-3 rounded">Valor adeudado</div> 
+                                    <div className="form-label text-center h3 border border-3 rounded" style={{backgroundColor: "#EEEDEC"}}>${valorAdeudado.toLocaleString()}</div>                                      
+                                </div>                                  
 
-                        {/* zona de grilla con listado de las sedes creadas */}
-                        <div className="ms-2 mb-2 form-check form-switch h4 ">    
-                            <label htmlFor="versedes" className="form-check-label">{tituloBoton}</label>                       
-                            {
-                                estadosVisibles ? <input type="checkbox" className="form-check-input" id="versedes" role="switch" onChange={verListado} style={{backgroundColor: "#2A3482"}}/>
-                                                :  <input type="checkbox" className="form-check-input" id="versedes" role="switch" onChange={verListado} />
-                            }                            
-                        </div> 
-                        {
-                        estadosVisibles && (
-                                <div className="ms-2 mt-3 p-2 border rounded">          
-                                    <DataTable 
-                                        title="Historial de pagos"
-                                        className="border rounded"
-                                        columns={columnas}
-                                        data={data} 
-                                        pagination
-                                        highlightOnHover
-                                        fixedHeader={true}
-                                        paginationComponentOptions={pagOptions}    
-                                        customStyles={customStyles}
-                                        conditionalRowStyles={conditionalRowStyles} 
-                                        progressPending={pending}
-                                        progressComponent={loader()}             
+                                <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                    <div className="form-label text-center h3 border border-3 rounded">Valor recibido</div>               
+                                    <input type="number" className="border rounded border-3 text-center w-100 fw-bold h3" id="valorRecibido"  placeholder="" value={frmData.valorRecibido}  
+                                        onChange={handler} ref={vrRef} inputMode="numeric"
+                                        style={{height: "40px"}}
                                     />
-                                </div>                  
-                        )
-                        }           
-                        { showInfo && <MsgDialog
-                            Title='Pagos de factura'
-                            Message={mensajeModal}
-                            Icon={operacion}
-                            BtnOkName='Aceptar'
-                            BtnNokName=''
-                            Show={showInfo}
-                            HandlerdClickOk={()=> setShowInfo(false)}
-                            size="lg"
-                            HandlerdClickNok={null}
-                        />}
-                    </div>            
+                                    <Alert show={apiError.valorRecibido && apiError.valorRecibido.length > 0} alert="#F3D8DA" msg={apiError.valorRecibido} />
+                                </div> 
+
+                                <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                                    <div className="form-label text-center h3 border border-3 rounded text-danger">Valor devuelto</div> 
+                                    <div className="form-label text-center h3 border border-3 rounded text-danger" style={{backgroundColor: "#EEEDEC"}}>${frmData.valorDevuelto?.toLocaleString()}</div> 
+                                </div> 
+                        
+                                <div className="row d-flex justify-content-center">
+                                    <div className="col-lg-4 col-md-12 col-sm-12 ">
+                                        <Button className="m-1 p-2 btn-success w-100" id="btnGuardar" onClick={OnbtnGuardar} >{btnRef}</Button>   
+                                    </div>   
+                                    <div className="col-lg-4 col-md-12 col-sm-12 ">
+                                        <Button className="m-1 p-2 btn-danger w-100 " id="btnLimpiar" onClick={reset} >Limpiar</Button>      
+                                    </div>                         
+                                </div>                    
+                            </form> 
+
+                            {/* zona de grilla con listado de las sedes creadas */}
+                            {
+                                (
+                                    <div className="ms-2 mt-3 p-2 border rounded">          
+                                        <DataTable 
+                                            title="Historial de pagos"
+                                            className="border rounded"
+                                            columns={columnas}
+                                            data={data} 
+                                            pagination
+                                            highlightOnHover
+                                            fixedHeader={true}
+                                            paginationComponentOptions={pagOptions}    
+                                            customStyles={customStyles}
+                                            conditionalRowStyles={conditionalRowStyles} 
+                                            progressPending={pending}
+                                            progressComponent={loader()}             
+                                        />
+                                    </div>                  
+                                )
+                            }           
+                            { showInfo && <MsgDialog
+                                Title='Pagos de factura'
+                                Message={mensajeModal}
+                                Icon={operacion}
+                                BtnOkName='Aceptar'
+                                BtnNokName=''
+                                Show={showInfo}
+                                HandlerdClickOk={()=> setShowInfo(false)}
+                                size="lg"
+                                HandlerdClickNok={null}
+                            />}
+                        </div>            
+                   
                 </div>
-                <div className='d-flex align-items-center justify-content-center ' style={{backgroundColor: "#2A3482"}}>
-                    <span className=' h3 text-white'>@Corys90</span>
-                </div>                        
-            </div>
-        </>
-
-
+            </div>            
+            <FooterBar/>                 
+        </div>
     )
 };
 

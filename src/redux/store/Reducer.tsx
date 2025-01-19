@@ -8,6 +8,7 @@ const initialState: inicialState = {
         profile: "",
         token: "",
         user: "",
+        sede: 0,
         tipologia: {
             cumpleSiNoStatic: [],
             motivoInventarioStatic: [],

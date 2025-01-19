@@ -17,28 +17,20 @@ const BarraMenu = () => {
     const emp:State.data  = useSelector((state: any) => state.emp);    
     const dispatch = useDispatch();
 
-/*     const fijoHeader = {
-        color: "#2A3482",
-        backgroundColor: "#F4F4F4",
-        position: "fixed",
-        zIndex: 1000,
-
-    } */
+    const init = async () =>{
+        const ss = await sessionStorage.getItem("entorno");
+        if (ss){
+            const sesionData = JSON.parse(ss);
+            await dispatch(SetEntornoEmp({...sesionData}));
+        } else{
+            navigate('/');  
+        }                   
+    }
 
     useEffect(()=>{
         
-        const init = async () =>{
-            const ss = await sessionStorage.getItem("entorno");
-            if (ss){
-                const sesionData = JSON.parse(ss);
-                console.log(sesionData);
-                dispatch(SetEntornoEmp({...sesionData}));
-            } else{
-                navigate('/');  
-            }                   
-        }
-
         init();
+
     },[]);
 
     return (
@@ -59,6 +51,7 @@ const BarraMenu = () => {
                         <span className="navbar-toggler-icon"></span>
                     </button>                    
                 </div>
+                
                 <div className="collapse navbar-collapse "   style={{"color": "#2A3482"}} id="navbarSupportedContent">
                     <ul className="navbar-nav me-auto mb-2 mb-lg-0"  >
                         {/* Home*/} 
@@ -88,7 +81,7 @@ const BarraMenu = () => {
                             </Link>
                             <ul className="dropdown-menu" aria-labelledby="navbarDropdownReferencia">                         
                                 <li><LinkToolTip id="inv-9" url="/posfacturacion" title="Registro de ventas de productos"  text="Registra las ventas de productos" icon={<FaFileInvoiceDollar />}/></li>  
-                                <li><LinkToolTip id="inv-9" url="/posfacturacion" title="Lista las ventas de productos"  text="Lista los productos vendidos" icon={<FaFileAlt />}/></li>        
+                                <li><LinkToolTip id="inv-9" url="/facturalist" title="Lista las ventas de productos"  text="Lista los productos vendidos" icon={<FaFileAlt />}/></li>        
                                 <li><LinkToolTip id="inv-9" url="/posfacturacion" title="Devoluciones de productos"  text="Registra las de devoluciones de productos vendidos" icon={<FaDev />}/></li>  
                                 <li><hr className="dropdown-divider"/></li> 
                                 <li><LinkToolTip id="inv-9" url="/pospagofacturacionpage" title="Pagos posteriores de facturas de venta"  text="Registra los pagos de facturas de ventas realizadas a clientes" icon={<FaMoneyBillAlt />}/></li>                                                      

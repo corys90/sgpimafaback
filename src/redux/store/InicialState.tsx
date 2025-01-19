@@ -5,6 +5,7 @@ export interface data {
     profile: string;
     token: string;
     user: string;
+    sede: number;
     tipologia: {
         cumpleSiNoStatic: object[];
         motivoInventarioStatic: object[];

@@ -12,8 +12,9 @@ import ModalPago from "../../component/ModalPago";
 import MsgDialog from "../../component/MsgDialog";
 import BarraMenu from "../../component/BarraMenu";
 import FooterBar from "../../component/FooterBar";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
+import { SetEntornoEmp } from "../../redux/store/Actions";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -116,7 +117,7 @@ const apiErrorDetail = {CodigoProducto: [], Cantidad: []};
 const PosFacturas = () => {
     
     const emp:State.data = useSelector((state: any) => state.emp);  
-    let [frmData, setFormData] = useState(form);    
+    let [frmData, setFormData] = useState({...form});    
     let [frmDetalle, setFormDetalle] = useState(frmDetailType);        
     let [frmDetalles, setFormDetalles] = useState([]);        
     const [pending, setPending] = useState(false); 
@@ -127,7 +128,7 @@ const PosFacturas = () => {
     const [showMsg, setShowMsg] = useState(false);    
     const [showPago, setShoPago] = useState(false);          
     let [tipoModal, setTipoModal] = useState(true);   
-    let [mensajeModal, setMensajeModal] = useState([]);  
+    let [mensajeModal, setMensajeModal] = useState<string[]>();  
     const [sizeModal, setSizeModal] = useState("lg");           
     let [idFactura, setIdFactura] = useState("");                       
     const [fechaFactura, setFechFactura] = useState(formatDate(new Date()));                 
@@ -139,41 +140,40 @@ const PosFacturas = () => {
     let [existProduct, setExistProduct] = useState(true);  
     let [maxCant, setMaxCant] = useState(0);      
     let [idVnd, setIdVnd] = useState(0);         
-    const [widthh, setWidth] = useState(window.innerWidth);
+
+    //const [widthh, setWidth] = useState(window.innerWidth);
    
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [   
         {
             name: '',
-            selector: (row: FormData, idx: number) => 
-                <div className='d-flex gap-3 justify-center align-items-center' key={idx}>
-                        <div key={idx}><a href='#!' className=' text-danger'  title="Borra item" onClick={()=>borraItem(idx)}>
+            selector: (row: FormDetalleFactura, idx: number) => 
+                <div className='d-flex gap-3 justify-center align-items-center'>
+                        <div ><a href='#!' className=' text-danger'  title="Borra item" onClick={()=>borraItem(idx)}>
                                 <FaRegTrashAlt style={{width: "20px", height: "20px"}}/>
                             </a>
                         </div>
                 </div>,
-            width: "50px",
-            right: "true", 
-            //omit: (widthh > 1657)             
+            width: "50px",         
         },      
         {
             name: 'Código',
             selector: (row: FormDetalleFactura) => row.CodigoProducto,
             sortable: true,
-            cell: (row: FormDetalleFactura, idx: number) => <div key={idx} className="w-100 text-end">{row.CodigoProducto}</div>,    
+            cell: (row: FormDetalleFactura) => <div  className="w-100 text-end">{row.CodigoProducto}</div>,    
             width: "100px",  
         },  
         {
             name: 'Descripción',
             selector: (row: FormDetalleFactura) => row.Descripcion,
             sortable: true,
-            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}  className="w-100 text-wrap">{row.Descripcion}</div>,    
+            cell: (row: FormDetalleFactura) => <div className="w-100 text-wrap">{row.Descripcion}</div>,    
             width: "300px",  
         }, 
         {
             name: 'Precio ($)',
             selector: (row: FormDetalleFactura) => row.ValUnitario,
-            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}  className="w-100 text-end">{Number(row.ValUnitario).toFixed(2)}</div>,                            
+            cell: (row: FormDetalleFactura) => <div  className="w-100 text-end">{Number(row.ValUnitario).toFixed(2)}</div>,                            
             sortable: true,     
             width: "110px", 
             format: (row: FormDetalleFactura) => row.ValUnitario.toLocaleString(),                 
@@ -182,7 +182,7 @@ const PosFacturas = () => {
             name: 'Cant.',
             selector: (row: FormDetalleFactura) => row.Cantidad,   
             sortable: true,
-            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}  className="w-100 text-end">{Number(row.Cantidad).toFixed(2)}</div>,    
+            cell: (row: FormDetalleFactura) => <div  className="w-100 text-end">{Number(row.Cantidad).toFixed(2)}</div>,    
             width: "90px",               
         },  
         {
@@ -195,8 +195,7 @@ const PosFacturas = () => {
         {
             name: 'Desc(%)',
             selector: (row: FormDetalleFactura) => row.Descuento,
-            width: "100px",
-            right: "true",    
+            width: "100px",  
             sortable: true,
             format: (row: FormDetalleFactura) => row.Descuento.toLocaleString(),
             style: {
@@ -213,7 +212,7 @@ const PosFacturas = () => {
                 backgroundColor: 'rgba(187, 204, 221, 1)',
                 color: 'red'
             }, 
-            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}  className="w-100 text-end">{Number(row.ValUnitarioDescuento).toFixed(2)}</div>,    
+            cell: (row: FormDetalleFactura) => <div  className="w-100 text-end">{Number(row.ValUnitarioDescuento).toFixed(2)}</div>,    
             width: "110px",   
         }, 
         {
@@ -225,14 +224,13 @@ const PosFacturas = () => {
                 color: 'black',
                 fontWeight: 900
             }, 
-            cell: (row: FormDetalleFactura, idx: number) => <div key={idx}   className="w-100 text-end">{Number(row.SubTotal).toFixed(2)}</div>,    
+            cell: (row: FormDetalleFactura) => <div className="w-100 text-end">{Number(row.SubTotal).toFixed(2)}</div>,    
             width: "130px",   
         },         
         {
             name: 'IVA(%)',
             selector: (row: FormDetalleFactura) => row.Iva,
             width: "100px",
-            right: "true",    
             sortable: true,
             format: (row: FormDetalleFactura) => row.Iva.toLocaleString()             
         },          
@@ -240,7 +238,6 @@ const PosFacturas = () => {
             name: 'Valor IVA($)',
             selector: (row: FormDetalleFactura) => row.ValIva,
             width: "130px",
-            right: "true",    
             sortable: true,
             format: (row: FormDetalleFactura) => row.ValIva.toLocaleString()              
         }, 
@@ -248,7 +245,6 @@ const PosFacturas = () => {
             name: 'Total',
             selector: (row: FormDetalleFactura) => row.Total,
             width: "130px",
-            right: "true",    
             sortable: true,
             format: (row: FormDetalleFactura) => row.Total.toLocaleString(),
             style: {
@@ -260,16 +256,14 @@ const PosFacturas = () => {
 /*         {
             name: '',
             selector: (row: FormData, idx: number) => 
-                <div className='d-flex gap-3 justify-center align-items-center'>
-                        <div key={idx}><a href='#!' className=' text-danger'  title="Borra ítem" onClick={()=>borraItem(idx)}>
+                <div className='d-flex gap-3 justify-center align-items-center' key={idx}>
+                        <div key={idx}><a href='#!' className=' text-danger'  title="Borra item" onClick={()=>borraItem(idx)}>
                                 <FaRegTrashAlt style={{width: "20px", height: "20px"}}/>
                             </a>
                         </div>
                 </div>,
-            width: "80px",
-            right: "true",  
-            omit: (widthh <= 1656)                
-        },  */                                                                              
+            width: "50px",      
+        }, */                                                                             
     ];
 
     const Mensajes = (tipo: boolean, msjs: any, size: string) => {
@@ -303,7 +297,7 @@ const PosFacturas = () => {
     const handler = (e: any) => {
 
         const id: string = e.target.id;
-        const value = e.target.value;
+        const value = (id === "Cantidad") ? parseFloat(e.target.value): e.target.value;
         frmData = {...frmData, [id]: value };
         setFormData({ ...frmData});
         apiError = {
@@ -424,6 +418,7 @@ const PosFacturas = () => {
             {
 
                 setApiError({...apiError});  
+
             }else{
                 frmData.createdAt = getFechaYhora();
                 frmData.updatedAt = getFechaYhora();
@@ -434,7 +429,7 @@ const PosFacturas = () => {
                 };
 
                 const response = await httpApiPPPD(`PosFacturacion`, "POST", {"Content-Type" : "application/json"}, fact);
-                //console.log(response);
+
                 if (response.statusCode >= 400){
                     mensajeModal = ["Se presentó un problema al generar la factura"];
                     Mensajes(false, mensajeModal, "md");
@@ -497,7 +492,6 @@ const PosFacturas = () => {
 
     const buscaProducto = async () =>{
         const response = await httpApiGet(`Posinventarioproducto/Pos/${frmData.idPos}/GetByProductoId/${frmDetalle.CodigoProducto}`);
-        console.log(response)
         if (response.statusCode >= 400){
             existProduct = true;
             mensajeModal = response.statusCode === 404 ? ["Producto no registrado"]: [];
@@ -517,15 +511,14 @@ const PosFacturas = () => {
             maxCant =  response.data[0].cantidad; 
             frmDetalle.UnidadMedida = response.data[0].unidadMedida;
             const um = emp.tipologia.unidadMedida.find((item: any) => item.id === response.data[0].unidadMedida);  
-            frmDetalle.UnidadMedidaName = um ? um.nombre : "";     
+            frmDetalle.UnidadMedidaName = um ? um.nombre : "";  
+
             setMaxCant(maxCant);
             setFormDetalle({...frmDetalle});                   
             existProduct = false;
-            console.log(um);
         }
         
-        setExistProduct(existProduct);       
-
+        setExistProduct(existProduct);
     }
 
     const onVendedorSelected = (idVendedor: number) =>{
@@ -600,10 +593,9 @@ const PosFacturas = () => {
         if (frmDetalle.Cantidad > maxCant){
             mensajeModal = [`No se puede añadir el producto. La cantidad solicitada es mayor al stock (${maxCant})`];
             Mensajes(false, mensajeModal, "xl");
-
         }else{
             frmDetalle.idPos = frmData.idPos;
-            const valorcompra =  (frmDetalle.ValUnitario * frmDetalle.Cantidad);
+            const valorcompra =  (frmDetalle.ValUnitario * ((frmDetalle.UnidadMedidaName === 'Kg') ? 1 : frmDetalle.Cantidad));
             frmDetalle.ValUnitarioDescuento = ( valorcompra * (frmDetalle.Descuento/100) );     
             frmDetalle.SubTotal = (valorcompra - frmDetalle.ValUnitarioDescuento);              
             frmDetalle.ValIva = frmDetalle.SubTotal * (frmDetalle.Iva/100);
@@ -631,13 +623,25 @@ const PosFacturas = () => {
         }, 1000); 
     }
 
+    const initial = async () =>{
+
+        const ss = await sessionStorage.getItem("entorno");
+        if (ss){
+            const sesionData = JSON.parse(ss);
+            frmData.fechaFactura = getFechaYhora().substring(0, 10);
+            frmData.fechaVencimiento = frmData.fechaFactura;
+            frmData.idPos = sesionData.sede;
+            frmData.tipoCliente = 1;
+            frmData.nit = "1";
+            setFormData({...frmData});    
+        }
+    }
+
     useEffect(()=>{
 
-        frmData.fechaFactura = getFechaYhora().substring(0, 10);
-        frmData.fechaVencimiento = frmData.fechaFactura;
-        setFormData({...frmData})
+        initial().then(()=>buscaCliente());
 
-        const handleResize = () => {
+/*         const handleResize = () => {
 
             setWidth(window.innerWidth);
         };
@@ -646,11 +650,9 @@ const PosFacturas = () => {
 
         return () => {
             window.removeEventListener('resize', handleResize);
-        };
+        }; */
 
     }, []);
-
-    //console.log(emp);
 
     return(
         <div className='container '>
@@ -673,7 +675,7 @@ const PosFacturas = () => {
 
                             <form className='row border rounded p-2 m-2'>
 
-                                <div className=" h5 p-1 rounded" style={{backgroundColor: "#85C4FF"}}>Datos del cliente (obligatorios)</div>
+                                <div className=" h5 p-1 rounded" style={{backgroundColor: "#85C4FF"}}>1. Datos del cliente (obligatorios)</div>
                                 <hr className="pb-2" />
 
                                 <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
@@ -686,6 +688,7 @@ const PosFacturas = () => {
                                         onSelect={handlerPersonalizedSelect} 
                                         ClassName="form-select" 
                                         id={`idPos`}
+                                        disabled={true}
                                     />                               
                                     <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
                                 </div> 
@@ -756,7 +759,7 @@ const PosFacturas = () => {
                                     
                                 </fieldset>                
 
-                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Otros</div>
+                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>2. Otros</div>
                                 <hr className="pb-2" />
 
                                 <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
@@ -778,7 +781,7 @@ const PosFacturas = () => {
                                     {/* <Alert show={apiError.nombre && apiError.nombre.length > 0} alert="#F3D8DA" msg={apiError.nombre} /> */}
                                 </div> 
 
-                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Vendedores</div>
+                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>3. Vendedores</div>
                                 <hr />
 
                                 <div className="col-lg-12 col-md-12 col-sm-12 mb-3">
@@ -790,7 +793,7 @@ const PosFacturas = () => {
                                     <Alert show={apiError.idVendedor && apiError.idVendedor.length > 0} alert="#F3D8DA" msg={apiError.idVendedor} />
                                 </div> 
                             
-                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>Producto</div>
+                                <div className=" h5 p-1 rounded"  style={{backgroundColor: "#85C4FF"}}>4. Producto</div>
                                 <hr />  
 
                                 <div className="col-lg-2 col-md-12 col-sm-12">
@@ -825,7 +828,7 @@ const PosFacturas = () => {
                                     <input type="text" className="form-control text-end" id="Descuento"  placeholder="" disabled  value={frmDetalle.Descuento} onChange={handler}/>
                                 </div> 
                                 <div className="col-lg-1 col-md-12 col-sm-12 mb-3">
-                                    <label htmlFor="nombre" className="form-label">Cant.</label>                                                                                                                                                                    
+                                    <label htmlFor="">Cant.</label><label htmlFor="nombre" className="form-label"  style={{fontSize: "10px", fontStyle: "italic"}}>(Un/Kg)</label>                                                                                                                                                                    
                                     <input type="number"  min={0} max={maxCant} className="form-control text-end" id="Cantidad"  
                                             placeholder="" disabled={existProduct} value={frmDetalle.Cantidad} onChange={handlerProductoId}
                                     />

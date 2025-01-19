@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "react-bootstrap";
 import DataTable from "react-data-table-component";
-import { FaPencilAlt, FaRegTrashAlt } from "react-icons/fa";
+import { FaRegTrashAlt } from "react-icons/fa";
 import Alert from "../../component/Alert";
 import ApiErrorMessage from "./Dtos/ApiErrorMessage";
 import FormData from "./Dtos/FormData";
 import MsgDialog from "../../component/MsgDialog";
-import { formatDate, getFechaYhora, httpApiDelete, httpApiGet, httpApiPPPD } from "../../lib";
+import { getFechaYhora, httpApiDelete, httpApiGet, httpApiPPPD } from "../../lib";
 import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
 import { useSelector } from "react-redux";
 
@@ -80,15 +80,16 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
     
     const emp:State.data = useSelector((state: any) => state.emp);  
     const [estadosVisibles, setEstadosVisibles] = useState(false);
-    const [tituloBoton, setTituloBoton] = useState("Mostrar Pagos");
     let [frmData, setFormData] = useState(form);    
     const [pending, setPending] = useState(false); 
     let [apiError, setApiError] = useState(ApiErrMsg); 
     let [data, setData] = useState([]);   
     const [showInfo, setShowInfo] = useState(false);    
     const [operacion, setOperacion] = useState(false); 
-    let [mensajeModal, setMensajeModal] = useState([]);       
+    let [mensajeModal, setMensajeModal] = useState([]);
+    let [valorAdeudado, setValorAdeudado] = useState(parseInt(`${props.Pago}`));           
     const [btnRef, setBtnRef] = useState("Pagar");      
+    const vrRef = useRef();     
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
@@ -190,28 +191,23 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
             [id]: [],
         }
         setApiError({...apiError});
-        console.log(frmData);
     }
 
     const handler = (e: any) => {
 
         const id: string = e.target.id;
         const value = e.target.value;
+        if (id === "valorRecibido"){
+            const vr = parseInt(vrRef.current.value ? vrRef.current.value : 0);
+            frmData.valorDevuelto = ((vr - valorAdeudado) < 0) ? 0 : (vr - valorAdeudado);
+        }        
         setFormData({ ...frmData, [id]: value });
+
         apiError = {
             ...apiError,
             [id]: [],
         }
         setApiError({...apiError}); 
-    }
-
-    const handlerCalculo = ()=>{
-
-        const vr = parseInt(`${frmData.valorRecibido}`);
-        const vf = parseInt(`${frmData.valorPagado}`);
-        frmData.valorDevuelto = vr - vf;
-        setFormData({ ...frmData}); 
-
     }
 
     const listar = async () =>{
@@ -228,6 +224,7 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
             setMensajeModal(mensajeModal);            
             setShowInfo(true);
         }else{
+            console.log("pagos: ", response.data);
             const dta: any = [];
             response.data.map((pgo: any) => {
                 let obj = {};
@@ -240,26 +237,19 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
             });
 
             data = [...dta];        
-            setData(data);                   
+            setData(data); 
+            
+            // realiza la sumatoria de los valores recibidos y saber lo adeudado en el recibo de compras
+            valorAdeudado = data.reduce((accumulator: number, currentValue: any) => {
+                return accumulator + currentValue.valorRecibido;
+            }, 0);  
+            setValorAdeudado(parseInt(props.Pago) - valorAdeudado);
         }
-    }
-
-    const verListado = async () => {
-        
-        if (!estadosVisibles){
-            listar();
-        }
-        setTituloBoton(!estadosVisibles ? "Ocultar Pagos" : "Mostrar Pagos");
-        setEstadosVisibles(!estadosVisibles);
     }
 
     const OnbtnLimpiar = () => {
         
         // borra las cajas de datos de entrada
-        //const inputsArray = Object.entries(frmData);
-        //const clearInputsArray = inputsArray.map(([key]) => [key, '']); // Recorremos el arreglo y retornamos un nuevo arreglo de arreglos conservando el key
-        //const inputsJson = Object.fromEntries(clearInputsArray); //Convertimos el arreglo de arreglos nuevamente a formato json
-        //frmData = {...inputsJson, id: 0, idCaja: 0, idPos: 0, valor: 0, revisorId: 0, estadoArqueo: 0, formaPago: 0}
         frmData.valorRecibido = 0;
         frmData.valorDevuelto = 0;
         setFormData(frmData);
@@ -267,7 +257,7 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
         setApiError(ApiErrMsg);
     } 
     
-    const OnbtnGuardar = async () => {
+    const OnbtnPagar = async () => {
         
         let msg = ""; 
         mensajeModal =  [];
@@ -323,40 +313,55 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
 
         if ((apiError.idCaja && (apiError.idCaja?.length > 0)) 
             || (apiError.idPos && (apiError.idPos?.length > 0))
-            || (apiError.idFactura && (apiError.idFactura?.length > 0))       
+            || (apiError.idFactura && (apiError.idFactura?.length > 0))    
+            || (apiError.formaPago && (apiError.formaPago?.length > 0))                
             || (apiError.valorRecibido && (apiError.valorRecibido?.length > 0)
             || (apiError.valorPagado && (apiError.valorPagado?.length > 0))
             || (apiError.fechaPago && (apiError.fechaPago?.length > 0))))
             {
             setApiError({...apiError});   
         }else{
-            
+          
             if (btnRef === "Pagar"){
-                frmData.createdAt = frmData.updatedAt = getFechaYhora();
+             
+                // realiza la sumatoria de los valores recibidos/abonados
+                const sumaValPag = data.reduce((accumulator: number, currentValue: any) => {
+                    return accumulator + currentValue.valorRecibido;
+                }, 0);
 
-                // Si el valor devuelto es negativo, no guardarlo
-                frmData = {...frmData, valorDevuelto: (frmData.valorDevuelto < 0) ? 0: frmData.valorDevuelto};
-                setFormData(frmData);
-
-                //Consumir service de /Poscajapagofactura, método Post
-                const response = await httpApiPPPD("PosCajaPagofactura", "POST", {
-                    "Content-Type" : "application/json"
-                }, frmData);
-
-                if (response.statusCode >= 400){
+                if (frmData.valorRecibido > (frmData.valorPagado - sumaValPag)){
                     setOperacion(false);
-                    mensajeModal = [...response.messages];
-
+                    setMensajeModal(["El valor recibido supera el valor adeudado del recibo de compra."]);            
+                    setShowInfo(true);                    
                 }else{
-                    setOperacion(true);
-                    // actualiza la grilla
-                    estadosVisibles && listar();
-                    msg = "Se ha guardado el pago exitosamente!!!";
-                    mensajeModal.push(msg);
-                    OnbtnLimpiar();
-                }  
+                    frmData.createdAt = frmData.updatedAt = getFechaYhora();
+
+                    // Si el valor devuelto es negativo, no guardarlo
+                    frmData = {...frmData, valorDevuelto: (frmData.valorDevuelto < 0) ? 0: frmData.valorDevuelto};
+                    setFormData(frmData);
+
+                    //Consumir service de /Poscajapagofactura, método Post
+                    const response = await httpApiPPPD("PosCajaPagofactura", "POST", {
+                        "Content-Type" : "application/json"
+                    }, frmData);
+
+                    if (response.statusCode >= 400){
+                        setOperacion(false);
+                        mensajeModal = [...response.messages];
+
+                    }else{
+                        setOperacion(true);
+                        // actualiza la grilla
+                        listar();
+                        msg = "Se ha guardado el pago exitosamente!!!";
+                        mensajeModal.push(msg);
+                        OnbtnLimpiar();
+                    }  
+                    setMensajeModal(mensajeModal);            
+                    setShowInfo(true);                    
+                }
             }else{
-                frmData.updatedAt = fechaYhora;
+                frmData.updatedAt = getFechaYhora();
                 //Consumir service de /PosTipoIdCliente, método Put
                 const response = await httpApiPPPD(`PosCajaPagofactura/${frmData.id}`, "PUT", {
                     "Content-Type" : "application/json"
@@ -367,17 +372,14 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
                 }else{
                     setOperacion(true);
                     // actualiza la grilla
-                    if (estadosVisibles){
-                        listar();
-                    }
+                    listar();
                     msg = "Se ha actualizado la información exitosamente!!!"
                     mensajeModal.push(msg);
                     OnbtnLimpiar();
+                    setMensajeModal(mensajeModal);            
+                    setShowInfo(true);                      
                 }  
             }
-
-            setMensajeModal(mensajeModal);            
-            setShowInfo(true);
         }
     }  
 
@@ -395,14 +397,17 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
         }
     }
 
-    console.log(emp);
-
     useEffect(()=>{
-2
+
         frmData.idFactura = parseInt(`${props.Factura}`);
         frmData.valorPagado = parseInt(`${props.Pago}`);    
-        frmData.fechaPago = getFechaYhora().substring(0, 10);    
+        frmData.fechaPago = getFechaYhora().substring(0, 10);   
+        frmData.idPos = emp.sede; 
+        const ncajas = emp.tipologia.cajas.filter((item: any) => item.idPos === parseInt(frmData.idPos.toString()));
+        frmData.idCaja = (ncajas.length <= 1) ? ncajas[0].id : 0;         
         setFormData({...frmData});
+
+        console.log("Emp: ", emp);
 
     }, []); 
 
@@ -426,7 +431,7 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
                     <Alert show={apiError.idPos && apiError.idPos.length > 0} alert="#F3D8DA" msg={apiError.idPos}/>                    
                 </div> 
                 <div className="col-lg-4  col-sm-12 mb-3">
-                    <label htmlFor="idPos" className="form-label">* Caja</label>   
+                    <label htmlFor="idCaja" className="form-label">* Caja</label>   
                     <GenericSelectPersonalized 
                         Data={emp.tipologia.cajas.filter((item: any) => item.idPos === parseInt(frmData.idPos.toString()))} 
                         ValueField="id"
@@ -445,12 +450,16 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
                 </div>    
                 <div className="col-lg-4  col-sm-12 mb-3">
                     <label htmlFor="idPos" className="form-label">* Forma de pago</label>   
-                    <select className="form-select" aria-label="Default select example" id="formaPago" value={frmData.formaPago} onChange={handler}>
-                        <option value="0" >Seleccione forma de pago</option>
-                        {
-                            formaPago.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.forma}`}</option>)
-                        }    
-                    </select>
+                    <GenericSelectPersonalized 
+                        Data={formaPago} 
+                        ValueField="id"
+                        ValueText="forma"
+                        Value={`${frmData.formaPago}`} 
+                        onSelect={handlerPersonalizedSelect} 
+                        ClassName="form-select" 
+                        id={`formaPago`}
+                        PersonalizedText="Seleccione forma de pago"
+                    />                     
                     <Alert show={apiError.formaPago && apiError.formaPago.length > 0} alert="#F3D8DA" msg={apiError.formaPago}/>                    
                 </div> 
                 
@@ -460,28 +469,33 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
                     <Alert show={apiError.fechaPago && apiError.fechaPago.length > 0} alert="#F3D8DA" msg={apiError.fechaPago} />
                 </div> 
 
-                <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                    <div className="form-label text-center h3 border border-3 rounded">Valor factura</div> 
+                <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                    <div className="form-label text-center h3 border border-3 rounded">Valor recibo</div> 
                     <div className="form-label text-center h3 border border-3 rounded" style={{backgroundColor: "#EEEDEC"}}>${frmData.valorPagado?.toLocaleString()}</div>                                      
                 </div> 
 
-                <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
+                    <div className="form-label text-center h3 border border-3 rounded">Valor adeudado</div> 
+                    <div className="form-label text-center h3 border border-3 rounded" style={{backgroundColor: "#EEEDEC"}}>${valorAdeudado.toLocaleString()}</div>                                      
+                </div>                 
+
+                <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                     <div className="form-label text-center h3 border border-3 rounded">Valor recibido</div>               
                     <input type="text" className="border rounded border-3 text-center w-100 fw-bold h3" id="valorRecibido"  placeholder="" value={frmData.valorRecibido}  
-                        onChange={handler} onKeyUp={handlerCalculo} inputMode="numeric"
+                        onChange={handler} inputMode="numeric" ref={vrRef}
                         style={{height: "40px"}}
                     />
                     <Alert show={apiError.valorRecibido && apiError.valorRecibido.length > 0} alert="#F3D8DA" msg={apiError.valorRecibido} />
                 </div>   
                 
-                <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                <div className="col-lg-3 col-md-12 col-sm-12 mb-3">
                     <div className="form-label text-center h3 border border-3 rounded text-danger">Valor devuelto</div> 
                     <div className="form-label text-center h3 border border-3 rounded text-danger" style={{backgroundColor: "#EEEDEC"}}>${frmData.valorDevuelto?.toLocaleString()}</div> 
                 </div>            
          
                 <div className="row d-flex justify-content-center">
                     <div className="col-lg-4 col-md-12 col-sm-12 ">
-                        <Button className="m-1 p-2 btn-success w-100" id="btnGuardar" onClick={OnbtnGuardar} >{btnRef}</Button>   
+                        <Button className="m-1 p-2 btn-success w-100" id="btnGuardar" onClick={OnbtnPagar} >{btnRef}</Button>   
                     </div>   
                     <div className="col-lg-4 col-md-12 col-sm-12 ">
                         <Button className="m-1 p-2 btn-danger w-100 " id="btnLimpiar" onClick={props.HandlerdClickCerrar} >Cerrar</Button>      
@@ -490,15 +504,8 @@ const PosCajaPagoFactura = (props:{HandlerdClickCerrar?: any, Factura?: any, Pag
             </form> 
 
             {/* zona de grilla con listado de las sedes creadas */}
-            <div className="ms-2 mb-2 form-check form-switch h4 ">    
-                <label htmlFor="versedes" className="form-check-label">{tituloBoton}</label>                       
-                {
-                    estadosVisibles ? <input type="checkbox" className="form-check-input" id="versedes" role="switch" onChange={verListado} style={{backgroundColor: "#2A3482"}}/>
-                                    :  <input type="checkbox" className="form-check-input" id="versedes" role="switch" onChange={verListado} />
-                }                            
-            </div> 
             {
-               estadosVisibles && (
+               (
                     <div className="ms-2 mt-3 p-2 border rounded">          
                         <DataTable 
                             title="Historial de pagos"

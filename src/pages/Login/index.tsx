@@ -1,25 +1,28 @@
 
 import { useNavigate } from "react-router-dom";
 import { Alert, Button, Col, Container, Form } from 'react-bootstrap';
-import { FaDoorOpen, FaKey, FaRegHandPaper, FaUserTie } from 'react-icons/fa';
+import { FaDoorOpen, FaKey, FaRegBuilding, FaRegHandPaper, FaUserTie } from 'react-icons/fa';
 import logo from '../../assets/logoPpal2.png';
 import './style.css';
 import { useDispatch } from "react-redux";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MsgDialog from "../../component/MsgDialog";
 import MsgModalSpinner from "../../component/MsgModalSpinner";
 import { SetEntornoEmp } from '../../redux/store/Actions';
-import { init } from "../../lib";
+import { httpApiGet, init } from "../../lib";
+import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
 
 const PageLogin = () => {
 
     const dispatch = useDispatch();
-    let [formData, setFormData] = useState({us:"imafasas", pw:"123", valid: "login"});
+    let [formData, setFormData] = useState({us:"imafasas", pw:"123", valid: "login", sede: 0});
     const navigate = useNavigate();
     const [msgDlgShow, setMsgDlgShow] = useState(false);
     const [msgAlrtUsr, setMsgAlrtUsr] = useState(false);
     const [msgAlrtPwd, setMsgAlrtPwd] = useState(false);
+    const [msgAlrtSede, setMsgAlrtSede] = useState(false);    
     const [sHCarga, setSHCarga] = useState(false);    
+    const [sedes, setSedes] = useState<any>([]);       
 
     const changeText = (evnt: any) => {
 
@@ -41,10 +44,11 @@ const PageLogin = () => {
 
         let sw = 0;
         
+        (formData.sede === 0) ? setMsgAlrtSede(true) : sw++; 
         (formData.us === "") ? setMsgAlrtUsr(true) : sw++; 
         (formData.pw === "") ? setMsgAlrtPwd(true) : sw++; 
 
-        if (sw === 2){
+        if (sw === 3){
 
             setSHCarga(true);
 
@@ -76,7 +80,7 @@ const PageLogin = () => {
                 first_name: "Usuario ", id_user: "0",
                 last_name: "pruebas", profile: "a.b.c.d.e", 
                 token:  "jwtOken", user: formData.us, 
-                tipologia: tpl
+                tipologia: tpl, sede: formData.sede
             }));   
 
             sessionStorage.setItem("entorno", 
@@ -84,14 +88,33 @@ const PageLogin = () => {
                     first_name: "Usuario ", id_user: "0",
                     last_name: "pruebas", profile: "a.b.c.d.e", 
                     token:  "jwtOken", user: formData.us, 
-                    tipologia: tpl
+                    tipologia: tpl, sede: formData.sede
                 }));
        
-            navigate("/landingpage");            
+            navigate("/landingpage");   
+
             setSHCarga(false);            
         }
-    
-    }
+    };
+
+    const handlerPersonalizedSelect = (e: any) => {
+
+        formData = {...formData, sede: parseInt(e.value) };
+        setFormData({ ...formData});
+
+        setMsgAlrtSede(false);
+    }    
+
+    useEffect (()=>{
+
+        const initial = async () =>{
+            const response = await httpApiGet("SedePos");
+            setSedes(response.data);
+        };
+
+        initial ();
+
+    }, []);
 
     return(
         <>
@@ -102,6 +125,24 @@ const PageLogin = () => {
                     </div>
                     <div className='m-3 text-center'><span className='h3'>Inicio de sesión</span></div>
                     <Form>
+                        <Form.Group className="mb-3" >
+                            <Form.Label><FaRegBuilding /> Sede</Form.Label>
+                            <GenericSelectPersonalized 
+                                Data={sedes} 
+                                ValueField="id"
+                                ValueText="nombre"
+                                Value={`${formData.sede}`} 
+                                onSelect={handlerPersonalizedSelect} 
+                                ClassName="form-select" 
+                                id={`idPos`}
+                            />                               
+                            <Form.Text>
+                                <Alert variant="danger" show={msgAlrtSede} className="p-1 m-0">
+                                    <FaRegHandPaper className='mb-1' /> Debe seleccionar una sede!!!
+                                </Alert>
+                                <div className=" text-end ">Seleccione la sede de trabajo</div>
+                            </Form.Text>
+                        </Form.Group>
                         <Form.Group className="mb-3" >
                             <Form.Label><FaUserTie /> Usuario</Form.Label>
                             <Form.Control type="user" placeholder="usuario" id="us" onChange={changeText} value={formData.us}/>

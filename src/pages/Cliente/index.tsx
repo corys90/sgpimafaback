@@ -6,9 +6,11 @@ import Alert from "../../component/Alert";
 import MsgYesNoDialog from "../../component/MsgYesNoDialog";
 import ApiErrorMessage from "./Dtos/ApiErrorMessage";
 import FormData from "./Dtos/FormData";
-import { formatDate, httpApiGet, httpApiPPPD } from "../../lib";
+import { formatDate, getFechaYhora, httpApiGet, httpApiPPPD } from "../../lib";
 import MsgDialog from "../../component/MsgDialog";
 import BarraMenu from "../../component/BarraMenu";
+import { useSelector } from "react-redux";
+import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -21,25 +23,18 @@ const customStyles = {
     header: {
         style: {
             color: "#2A3482",
-            fontSize: "22px",
+            fontSize: "20px",
         },
     },
     headRow:{
         style: {
             color: "#2A3482",
             background:"#F5F5F5",
-            fontSize: "18px",
+            fontSize: "14px",
         },
     },
-}; 
+};
 
-const conditionalRowStyles =[ {
-    when: (row: { estado: number; }) =>  row.estado === 1,
-    style:{
-        color: "#E8E8E8",
-        backgroundColor: "white", 
-    },
-}];
 
 const loader = ()=> {
     return (
@@ -50,8 +45,7 @@ const loader = ()=> {
 const form: FormData = {
     id: 0,
     idCliente: 0,
-    tipoIdCliente: 0, 
-    tipoId: "",       
+    tipoIdCliente: 0,       
     dpto: "",   
     ciudad: "",    
     direccion: "",
@@ -77,6 +71,7 @@ const ApiErrMsg: ApiErrorMessage = {
 
 const ClientePage = () => {
     
+    const emp:State.data = useSelector((state: any) => state.emp);  
     const [estadosVisibles, setEstadosVisibles] = useState(false);
     const [tituloBoton, setTituloBoton] = useState("Mostrar los Clientes");
     let [frmData, setFormData] = useState(form);    
@@ -87,32 +82,42 @@ const ClientePage = () => {
     const [showYesNo, setShowYesNo] = useState(false); 
     const [showInfo, setShowInfo] = useState(false);    
     const [operacion, setOperacion] = useState(false); 
-    let [mensajeModal, setMensajeModal] = useState([]);  
-    let [sltTipoId, setSltTipoId] = useState([]);           
+    let [mensajeModal, setMensajeModal] = useState([]);         
     const [id, setId] = useState(form);   
-    const [btnRef, setBtnRef] = useState("Guardar");            
-
-    // Obtiene la fecha y hora actual en formato YYYY-MM-DDTHH:MM:SS
-    const hh = (new Date().getHours()) < 10 ? `0${new Date().getHours()}`:`${new Date().getHours()}`;
-    const mm = (new Date().getMinutes()) < 10 ? `0${new Date().getMinutes()}`:`${new Date().getMinutes()}`; 
-    const fechaYhora = `${formatDate(new Date())}T${hh}:${mm}:00`; 
+    const [btnRef, setBtnRef] = useState("Guardar");
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [
+        
         {
-            name: 'Id.',
+            name: 'Acciones',
+            selector: (row: any) => 
+                <div className='d-flex gap-3 justify-center align-items-center'>
+                        <div>
+                            <a href='#inicio' className={`${(row.estado) ? "pe-none " : "text-warning"}`} title="Edita" onClick={()=>edita(row)} style={{color: `${(row.estado === 1) ? "#F2D7D5": ""}`}}>
+                                <FaPencilAlt style={{width: "20px", height: "20px"}}/>
+                            </a>
+                        </div> 
+                        <div >
+                            <a href='#!' className=' text-danger'  title="Borra" onClick={()=>borraSiNo(row)}>
+                                <FaRegTrashAlt style={{width: "20px", height: "20px"}}/>
+                            </a>
+                        </div>
+                </div>,
+            width: "100px",
+        },          
+        {
+            name: 'Id',
             selector: (row: FormData) => row.idCliente,
             width: "100px",
             sortable: true,
-            right: "true",
-/*             cell: (row: any )=> <a href="#!">{row.idCliente}</a>, */
         },  
         {
-            name: 'Td.',
+            name: 'Tipo',
             selector: (row: FormData) => row.tipoId,
-            width: "100px",
+            width: "150px",
             sortable: true,
-            right: "true",
+
         },          
         {
             name: 'Nombres',
@@ -124,14 +129,14 @@ const ClientePage = () => {
         {
             name: 'Apellidos',
             selector: (row: FormData) => row.apellidos,
-            width: "150px",
+            width: "180px",
             wrap: true,
             sortable: true,
         }, 
         {
             name: 'Dpto',
             selector: (row: FormData) => row.dpto,
-            width: "110px",
+            width: "120px",
             wrap: true,
             sortable: true,            
         },                
@@ -159,28 +164,10 @@ const ClientePage = () => {
         {
             name: 'Email',
             selector: (row: FormData) => row.email,
-            width: "180px",
+            width: "240px",
             wrap: true,
             sortable: true,            
-        },          
-        
-        {
-            name: 'Acciones',
-            selector: (row: any) => 
-                <div className='d-flex gap-3 justify-center align-items-center'>
-                        <div>
-                            <a href='#inicio' className={`${(row.estado === 1) ? "pe-none " : "text-warning"}`} title="Edita" onClick={()=>edita(row)} style={{color: `${(row.estado === 1) ? "#F2D7D5": ""}`}}>
-                                <FaPencilAlt style={{width: "20px", height: "20px"}}/>
-                            </a>
-                        </div> 
-                        <div >
-                            <a href='#!' className=' text-danger'  title="Borra" onClick={()=>borraSiNo(row)}>
-                                <FaRegTrashAlt style={{width: "20px", height: "20px"}}/>
-                            </a>
-                        </div>
-                </div>,
-            width: "150px",
-        },                            
+        },                                    
     ];
 
     const handler = (e: any) => {
@@ -195,8 +182,26 @@ const ClientePage = () => {
         setApiError({...apiError});
     }
 
+    const handlerPersonalizedSelect = (e: any) => {
+
+        const id: string = e.id;
+        const value: string = e.value;
+
+        frmData = {...frmData, [id]: value };
+        setFormData({ ...frmData});
+
+        apiError = {
+            ...apiError,
+            [id]: [],
+        }
+        setApiError({...apiError});
+
+        // valida si tipocliente y nit contienen valores valido para habilitar el botón de busqueda
+        //setBtnSearch( !((parseInt(`${frmData.tipoCliente}`) !== 0) && (frmData.nit !== "")) );
+    }
+
     const listar = async () =>{
-        const response = await httpApiGet("Cliente");
+        const response = await httpApiGet("Clientes");
         if (response.statusCode >= 400){
             setOperacion(false);
             mensajeModal = [...response.messages];
@@ -204,10 +209,11 @@ const ClientePage = () => {
             setMensajeModal(mensajeModal);            
             setShowInfo(true);
         }else{
+            console.log(response);
             const dta: any = [];
             response.data.map((dt: any) => {
                 let obj = {};
-                const td: any = sltTipoId.find((td: any) => td.id === dt.tipoIdCliente);
+                const td: any = emp.tipologia.tipoIdCliente.find((td: any) => td.id === dt.tipoIdCliente);
                 obj = {...dt, tipoId: td.nombre}
                 dta.push(obj);    
             });
@@ -228,10 +234,7 @@ const ClientePage = () => {
     const OnbtnLimpiar = () => {
         
         // borra las cajas de datos de entrada
-        const inputsArray = Object.entries(frmData);
-        const clearInputsArray = inputsArray.map(([key]) => [key, '']); // Recorremos el arreglo y retornamos un nuevo arreglo de arreglos conservando el key
-        const inputsJson = Object.fromEntries(clearInputsArray); //Convertimos el arreglo de arreglos nuevamente a formato json
-        frmData = {...inputsJson, id: 0, estado: 0, idCliente: 0, tipoIdCliente: 0}
+        frmData = {...form, id: 0, estado: 0, idCliente: 0, tipoIdCliente: 0}
         setFormData(frmData);
         setBtnRef("Guardar");
         setApiError(ApiErrMsg);
@@ -240,6 +243,7 @@ const ClientePage = () => {
     const OnbtnGuardar = async (e: any) => {
 
         e.preventDefault();
+        console.log(frmData);
 
         let msg = ""; 
         mensajeModal =  [];
@@ -300,13 +304,14 @@ const ClientePage = () => {
             {
                 setApiError({...apiError});   
         }else{
+            console.log(frmData);
             
             if (btnRef === "Guardar"){
-                frmData.createdAt = fechaYhora;
-                frmData.updatedAt = fechaYhora;
+
+                frmData.createdAt = frmData.updatedAt = getFechaYhora();
 
                 //Consumir service de /PosTipoIdCliente, método Post
-                const response = await httpApiPPPD("Cliente", "POST", {
+                const response = await httpApiPPPD("Clientes", "POST", {
                     "Content-Type" : "application/json"
                 }, frmData);
 
@@ -325,9 +330,9 @@ const ClientePage = () => {
                     OnbtnLimpiar();
                 }  
             }else{
-                frmData.updatedAt = fechaYhora;
+                frmData.updatedAt = getFechaYhora();
                 //Consumir service de /PosTipoIdCliente, método Put
-                const response = await httpApiPPPD(`Cliente/${frmData.id}/${frmData.idCliente}`, "PUT", {
+                const response = await httpApiPPPD(`Clientes/${frmData.id}/${frmData.idCliente}`, "PUT", {
                     "Content-Type" : "application/json"
                 }, frmData);
                 if (response.statusCode >= 400){
@@ -362,7 +367,7 @@ const ClientePage = () => {
         // Antes de eliminarlo fisicamente del sistema, verificar si está siendo usado
         // Se actualiza el estado 
         frmData = {...id, estado: ((id.estado === 0) ? 1 : 0) }    
-        const response = await httpApiPPPD(`Cliente/${frmData.id}/${frmData.idCliente}`, "PUT", {
+        const response = await httpApiPPPD(`Clientes/${frmData.id}/${frmData.idCliente}`, "PUT", {
             "Content-Type" : "application/json"
         }, frmData);
         if (response.statusCode >= 400){
@@ -384,23 +389,6 @@ const ClientePage = () => {
 
     useEffect(()=>{
 
-        const getTipoIdclientes = async ()=>{
-            const response = await httpApiGet("PosTipoIdCliente");
-            if (response.statusCode >= 400){
-                setOperacion(false);
-                mensajeModal = [...response.messages];
-    
-                setMensajeModal(mensajeModal);            
-                setShowInfo(true);
-            }else{
-                const fltr: any = response.data.filter(obj => obj.estado !== 1);
-                sltTipoId = [...fltr];
-                setSltTipoId(sltTipoId);                   
-            }
-        }
-
-        getTipoIdclientes();
-
     }, []);  
 
     return(
@@ -414,18 +402,21 @@ const ClientePage = () => {
                         <label htmlFor="" className="h3 p-2 m-2">Clientes</label>
                         <form className='row border p-2 m-2' onSubmit={OnbtnGuardar}>
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                                <label htmlFor="tipoIdCliente" className="form-label">* Tipo Identificación</label>                
-                                <select className="form-select" aria-label="Default select example" id="tipoIdCliente" value={frmData.tipoIdCliente} onChange={handler} disabled={(btnRef == "Actualizar")}>
-                                    <option value="0" >Seleccione tipo identificación</option>
-                                    {
-                                        sltTipoId.map((opc: any, idx: number )=> <option key={idx} value={opc.id} >{`${opc.nombre} ${opc.descripcion}`}</option>)
-                                    }                       
-                                </select>
+                                <label htmlFor="tipoIdCliente" className="form-label">* Tipo Identificación</label>    
+                                <GenericSelectPersonalized 
+                                    Data={emp.tipologia.tipoIdCliente} 
+                                    ValueField="id"
+                                    ValueText="nombre"
+                                    Value={`${frmData.tipoIdCliente}`} 
+                                    onSelect={handlerPersonalizedSelect} 
+                                    ClassName="form-select" 
+                                    id={`tipoIdCliente`}
+                                /> 
                                 <Alert show={apiError.tipoIdCliente && apiError.tipoIdCliente.length > 0} alert="#F3D8DA" msg={apiError.tipoIdCliente}/>                    
                             </div>
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                                 <label htmlFor="idCliente" className="form-label">* Identificación</label>                
-                                <input type="text" className="form-control" id="idCliente" placeholder="" value={frmData.idCliente} onChange={handler}  disabled={(btnRef == "Actualizar")}/>
+                                <input type="text" className="form-control  text-end" id="idCliente" placeholder="" value={frmData.idCliente} onChange={handler}  disabled={(btnRef == "Actualizar")}/>
                                 <Alert show={apiError.idCliente && apiError.idCliente.length > 0} alert="#F3D8DA" msg={apiError.idCliente}/>
                             </div>      
                             <div className="col-lg-4 col-md-12 col-sm-12 mb-3 border rounded">        
@@ -488,7 +479,7 @@ const ClientePage = () => {
                         estadosVisibles && (
                                 <div className="ms-2 mt-3 p-2 border rounded">                
                                     <DataTable 
-                                        title="Vendedores"
+                                        title="Clientes"
                                         className="border rounded"
                                         columns={columnas}
                                         data={data} 
@@ -497,7 +488,6 @@ const ClientePage = () => {
                                         fixedHeader={true}
                                         paginationComponentOptions={pagOptions}    
                                         customStyles={customStyles}
-                                        conditionalRowStyles={conditionalRowStyles} 
                                         progressPending={pending}
                                         progressComponent={loader()}            
                                     />

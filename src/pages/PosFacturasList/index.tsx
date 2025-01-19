@@ -5,9 +5,10 @@ import { FaPencilAlt, FaRegEye, FaRegTrashAlt, FaSearch } from "react-icons/fa";
 import Alert from "../../component/Alert";
 import FormData from "./Dto/FormData";
 import VerFactura from "../../component/VerFactura";
-import { httpApiGet } from "../../lib";
-import { GrTextAlignCenter } from "react-icons/gr";
+import { getFechaYhora, httpApiGet } from "../../lib";
 import BarraMenu from "../../component/BarraMenu";
+import FooterBar from "../../component/FooterBar";
+import GenericSelectPersonalized from "../../component/GenericSelectPersonalized";
 
 const pagOptions = {
     rowsPerPageText: "Filas por páginas",
@@ -46,9 +47,12 @@ const loader = ()=> {
     );
 }
 
-/* const ApiErrMsg: any = {
-    idFiltro               : [],
-}; */
+const dataFiltro = [
+    {id:1, forma:"Todos los recibos de ventas"}, 
+    {id:2, forma:"Nro. recibo de venta"}, 
+    {id:3, forma:"Identificación del cliente por rango de fechas"}, 
+    {id:4, forma:"Solo los del rango de fechas"}
+];
 
 const PosFacturasList = () => {
     
@@ -56,12 +60,9 @@ const PosFacturasList = () => {
     const [pending, setPending] = useState(false); 
     const [showMsg, setShowMsg] = useState(false);     
     let [verFactura, setVerFactura] = useState(false); 
-    let [idFactura, setIdFactura] = useState(0);           
-    let [tipoModal, setTipoModal] = useState(true);   
-    let [mensajeModal, setMensajeModal] = useState([]);          
-    let [sltPos, setSltPos] = useState([]);     
-    let [filtro, setFiltro] = useState({tipoFiltro: "0", filtro: ""});                                    
-    const [width, setWidth] = useState(window.innerWidth);
+    let [idFactura, setIdFactura] = useState(0);            
+    let [mensajeModal, setMensajeModal] = useState([]);              
+    let [filtro, setFiltro] = useState({tipoFiltro: "0", Valfiltro: "", fechaI: "", fechaF: ""});                                    
 
     // sección relacionada con la tabla o grilla de inmuebles
     const columnas = [   
@@ -138,7 +139,7 @@ const PosFacturasList = () => {
         },                                                                               
     ];
 
-    const listar = async (filtro: any) =>{
+    const listar = async () =>{
 
         let response;
         let uri;
@@ -147,47 +148,49 @@ const PosFacturasList = () => {
         frmData = [];
         setFormData(frmData);
 
+        console.log("Filtro: ", filtro);
+
         if (filtro.tipoFiltro === '1'){
-            uri = `Posfactura`;
+            uri = `PosFacturacion`;
         }else{
             if (filtro.tipoFiltro  === '2'){
-                if (filtro.filtro === ""){
+                if (filtro.Valfiltro === ""){
                     setShowMsg(true);
                     return;
                 }
-                const nf = parseInt(`${filtro.filtro}`);
-                uri = `Posfactura/${nf}`;
+                const nf = parseInt(`${filtro.Valfiltro}`);
+                uri = `PosFacturacion/${nf}`;
             }else{
                 if (filtro.tipoFiltro  === '3'){
-                    if (filtro.filtro === ""){
+                    if (filtro.Valfiltro === ""){
                         setShowMsg(true);
                         return;
                     }
-                    uri = `Posfactura/GetByClienteId/${filtro.filtro}`;
+                    uri = `PosFacturacion/GetByClienteId/${filtro.Valfiltro}`;
                 }else{
-                    return;
+                    if(filtro.tipoFiltro  === '4'){
+                        if ((filtro.fechaI === "") || (filtro.fechaI === "")){
+                            setShowMsg(true);
+                            return;
+                        }
+                        uri = `PosFacturacion/${filtro.fechaI}/${filtro.fechaI}`;                        
+                    }else{
+                        return;
+                    }
                 }
             }
         }
+
         response = await httpApiGet(uri);        
         if (response.statusCode >= 400){
             mensajeModal = [...response.messages];
             setMensajeModal(mensajeModal);            
 
         }else{
+            console.log(response.data);
             frmData = [...response.data];        
             setFormData(frmData);                   
         }
-    }
-
-    const Mensajes = (tipo: boolean, msjs: any, size: string) => {
-
-        setShowMsg(true);
-        tipoModal = tipo;
-        setTipoModal(tipoModal);
-        setMensajeModal(msjs);
-        setSizeModal(size);
-
     }
     
     const handler = (e: any) => {
@@ -196,22 +199,25 @@ const PosFacturasList = () => {
         const id = e.target.id;
         filtro  = {...filtro, [id]: value};
         setFiltro({...filtro});
-        if (id === "filtro"){
+        if (id === "Valfiltro"){
             setShowMsg(false);        
         }
     }
 
-    const getUnidadMedida = async (umId: number)=>{
-        const response = await httpApiGet(`PosUnidadesMedida/${umId}`);
-        if (response.statusCode >= 400){
-            setOperacion(false);
-            mensajeModal = [...response.messages];
-            setMensajeModal(mensajeModal);            
-            setShowInfo(true);
+    const handlerPersonalizedSelect = (e: any) => {
+
+        const id: string = e.id;
+        const value: string = e.value;
+
+        filtro = {...filtro, [id]: value };
+        if ((value === "3") || (value === "4")){
+            filtro.fechaI =  filtro.fechaF = getFechaYhora().substring(0, 10);
+            console.log(filtro);
         }else{
-            return response.data[0].nombre;                
+            filtro.fechaI =  filtro.fechaF = "";
         }
-    }  
+        setFiltro({...filtro});
+    }
 
     const Ver = (idf: number)=>{
 
@@ -223,89 +229,116 @@ const PosFacturasList = () => {
     }
     
     useEffect(()=>{
-            
-        const handleResize = () => {
-
-            setWidth(window.innerWidth);
-        };
-
-        window.addEventListener('resize', handleResize);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-        };
-
     }, []) 
 
     return(
         <>
-            <div className=' vh-100 ms-5 me-5 border rounded-3 shadow'>
+            <div className='container'>
                 <BarraMenu /> 
-                <div  className='d-flex justify-content-evenly align-items-center bg-body-tertiary'>
-                    <div className="">
-                        <div className="col-lg-12 col-md-12  col-sm-12 ">
-                            <div className=" border p-1 rounded w-100" style={{"color": "#2A3482"}}>
-                                <a id="inicio"></a>
+                <div>
+                    <div  className="container border rounded " style={{"color": "#2A3482"}}>
+                        <div className="">
+                            <div className="col-lg-12 col-md-12  col-sm-12 ">
+                                <div className=" border p-1 rounded w-100" style={{"color": "#2A3482"}}>
+                                    <a id="inicio"></a>
 
-                                <label htmlFor="" className="h3 p-2 m-2">Listado de facturas generadas</label>
-                                <fieldset className='row border rounded p-2 m-2'>
+                                    <label htmlFor="" className="h3 p-2 m-2">Listado de ventas generadas</label>
+                                    <fieldset className='row border rounded p-2 m-2'>
 
-                                    <div className="col-lg-12 col-md-12 col-sm-12 mb-3 " style={{backgroundColor: "#F4F6F6"}}>
-                                        <div className="  row d-flex border rounded">
-                                            <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
-                                                <label htmlFor="idPos" className="form-label">Filtrar por </label>                
-                                                <select className="form-select" aria-label="Default select example" id="tipoFiltro" value={filtro.tipoFiltro} onChange={handler} >
-                                                    <option value="0" >Seleccione</option> 
-                                                    <option value="1" >Todas las facturas</option>                                         
-                                                    <option value="2" >Nro. Factura</option> 
-                                                    <option value="3" >Nro. Identificación Cliente</option>                                                                                 
-                                                </select>          
-                                            </div> 
-                                            <div className="col-lg-6 col-md-12 col-sm-12">
-                                                <label htmlFor="idCliente" className="form-label">Valor filtro</label> 
-                                                <div className="w-100 d-flex gap-2 ">
-                                                    <div className="w-100">
-                                                        <input type="text" className="form-control" id="filtro"  placeholder="" value={filtro.filtro} disabled={(filtro.tipoFiltro === "0") || (filtro.tipoFiltro === "1")} onChange={handler}/>                    
-                                                    </div>                         
-                                                    <div className="">                    
-                                                        <Button className=" btn-secondary " disabled={(filtro.tipoFiltro === "0")}  onClick={() => listar(filtro)} > <FaSearch /></Button>   
-                                                    </div>                      
+                                        <div className="col-lg-12 col-md-12 col-sm-12 mb-3 " style={{backgroundColor: "#F4F6F6"}}>
+                                            <div className="  row d-flex border rounded">
+
+                                                <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                                                    <label htmlFor="idPos" className="form-label">Filtrar por </label>                
+                                                    <GenericSelectPersonalized 
+                                                        Data={dataFiltro} 
+                                                        ValueField="id"
+                                                        ValueText="forma"
+                                                        Value={`${filtro.tipoFiltro}`} 
+                                                        onSelect={handlerPersonalizedSelect} 
+                                                        ClassName="form-select" 
+                                                        id={`tipoFiltro`}
+                                                        PersonalizedText="Seleccione opción"
+                                                    />         
                                                 </div> 
-                                                <Alert show={showMsg} alert="#F3D8DA" msg={["Debe digitar un valor"]} />                  
-                                            </div>                                
-                                        </div>
-                                    </div>
-                                    {/* zona de detalle del produto */}
-                                    <div className=" mt-3 mb-3 p-2 rounded">          
-                                        <DataTable 
-                                            title=""
-                                            className="border rounded"
-                                            columns={columnas}
-                                            data={frmData} 
-                                            pagination
-                                            highlightOnHover
-                                            fixedHeader={true}
-                                            paginationComponentOptions={pagOptions}    
-                                            customStyles={customStyles}
-                                            conditionalRowStyles={conditionalRowStyles} 
-                                            progressPending={pending}
-                                            progressComponent={loader()}             
-                                        />                    
-                                    </div>  
 
-                                </fieldset>                                   
-                            </div>            
-                        </div>
-                        {verFactura && <VerFactura
-                                    Show={verFactura}
-                                    HandlerdClickCerrar={()=>setVerFactura(false)}
-                                    Factura={idFactura}
-                                /> }              
-                    </div>            
+                                                <div className="col-lg-2 col-md-12 col-sm-12">
+                                                    <label htmlFor="idCliente" className="form-label">Valor filtro</label> 
+                                                    <div className="w-100 d-flex gap-2 ">
+                                                        <div className="w-100">
+                                                            <input type="number" min={0} className="form-control text-end" id="Valfiltro"  placeholder="" 
+                                                                    value={filtro.Valfiltro} disabled={(filtro.tipoFiltro === "0") || (filtro.tipoFiltro === "1") || (filtro.tipoFiltro === "4")} 
+                                                                    onChange={handler}
+                                                            />                    
+                                                        </div>                                              
+                                                    </div> 
+                                                    <Alert show={showMsg} alert="#F3D8DA" msg={["Digite dato del filtro"]} />                  
+                                                </div>   
+
+                                                <div className="col-lg-2 col-md-12 col-sm-12">
+                                                    <label htmlFor="fechaIni" className="form-label">Fecha inicial</label> 
+                                                    <div className="w-100 d-flex gap-2 ">
+                                                        <div className="w-100">
+                                                            <input type="date" className="form-control" id="fechaI"  placeholder="" 
+                                                                    value={filtro.fechaI} disabled={(filtro.tipoFiltro === "0") || (filtro.tipoFiltro === "1") || (filtro.tipoFiltro === "2")} 
+                                                                    onChange={handler}
+                                                            />                    
+                                                        </div>                                             
+                                                    </div>              
+                                                </div>  
+
+                                                <div className="col-lg-2 col-md-12 col-sm-12">
+                                                    <label htmlFor="fechaFin" className="form-label">Fecha final</label> 
+                                                    <div className="w-100 d-flex gap-2 ">
+                                                        <div className="w-100">
+                                                            <input type="date" className="form-control" id="fechaF"  placeholder="" 
+                                                                    value={filtro.fechaF} disabled={(filtro.tipoFiltro === "0") || (filtro.tipoFiltro === "1") || (filtro.tipoFiltro === "2")} 
+                                                                    onChange={handler}
+                                                            />                    
+                                                        </div>                                          
+                                                    </div>             
+                                                </div>  
+
+                                                <div className="col-lg-2 col-md-12 col-sm-12 mt-2">
+                                                    <div className="d-flex justify-content-center align-items-center h-100">
+                                                        <div className="w-100">
+                                                            <Button className=" btn-success w-100" disabled={(filtro.tipoFiltro === "0")} onClick={() => listar()} ><FaSearch /> Filtrar</Button>  
+                                                        </div>
+                                                    </div>
+                                                </div>           
+                                            </div>
+                                        </div>
+                                        {/* zona de detalle del produto */}
+                                        <div className=" mt-3 mb-3 p-2 rounded">          
+                                            <DataTable 
+                                                title=""
+                                                className="border rounded"
+                                                columns={columnas}
+                                                data={frmData} 
+                                                pagination
+                                                highlightOnHover
+                                                fixedHeader={true}
+                                                paginationComponentOptions={pagOptions}    
+                                                customStyles={customStyles}
+                                                conditionalRowStyles={conditionalRowStyles} 
+                                                progressPending={pending}
+                                                progressComponent={loader()}             
+                                            />                    
+                                        </div>  
+
+                                    </fieldset>                                   
+                                </div>            
+                            </div>
+                            {verFactura && <VerFactura
+                                        Show={verFactura}
+                                        HandlerdClickCerrar={()=>setVerFactura(false)}
+                                        Factura={idFactura}
+                                    /> }              
+                        </div>            
+                    </div>                    
                 </div>
-                <div className='d-flex align-items-center justify-content-center ' style={{backgroundColor: "#2A3482"}}>
-                    <span className=' h3 text-white'>@Corys90</span>
-                </div>                        
+
+                <FooterBar/>                        
             </div>
         </>
 

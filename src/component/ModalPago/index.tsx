@@ -8,7 +8,7 @@ const ModalPago = (props: {Show: boolean, HandlerdClickCerrar: any, Factura: any
         <Modal show={props.Show} centered={true} animation={true} size='xl'>
             <Modal.Header  className={`bg-success`}  >
                 <Modal.Title className='h3 text-center text-light'>
-                    <h1>Pagar factura</h1>
+                    <h3>Pagar recibo de venta</h3>
                 </Modal.Title>
             </Modal.Header>
             <Modal.Body>

@@ -306,9 +306,8 @@ const InventarioProductos = () => {
             setApiError({...apiError});   
         }else{
             if (btnRef === "Guardar"){
-                frmData.createdAt = getFechaYhora();
-                frmData.updatedAt = getFechaYhora();
-                frmData.fechaCreacion = getFechaYhora();
+                frmData.createdAt = frmData.updatedAt = frmData.fechaCreacion = getFechaYhora();
+
                 // calcular aquí la fecha de vencimiento según fecha de creación
                 frmData.fechaVencimiento = getFechaYhora();
                 
